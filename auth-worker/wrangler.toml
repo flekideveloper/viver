@@ -1,0 +1,9 @@
+name = "viver-auth"
+main = "src/index.js"
+compatibility_date = "2026-10-28"
+workers_dev = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "viver-oauth-db"
+database_id = "91a7832f-464d-4b74-906f-3b66bd2089ec"
