@@ -86,7 +86,8 @@
   const countryLabel=x=>{try{return new Intl.DisplayNames([ua()?'uk':'en'],{type:'region'}).of(x.code)||x.code}catch{return x.code}};
   return '<div class="creator-provider-head"><span class="creator-brand creator-brand-youtube">▶</span><div><strong>YouTube</strong><small>'+esc(connection.label||d.channel?.label||'')+'</small></div><span class="creator-connected-dot">'+t('Підключено','Connected')+'</span></div>'+
     '<div class="creator-period">'+t('7 останніх доступних днів: ','Last 7 available days: ')+displayDate(period.start)+' — '+displayDate(period.end)+' · '+t('Порівняння: ','Compared with: ')+displayDate(period.comparisonStart)+' — '+displayDate(period.comparisonEnd)+'</div>'+
-    '<div class="creator-metric-grid">'+metrics.join('')+'</div>'+
+    '<div class="creator-metric-grid creator-metric-compact">'+[metrics[0],metrics[1],metrics[3],metrics[4]].join('')+'</div>'+
+    '<details class="creator-overview-more"><summary>'+t('Детальна аналітика · джерела переглядів та графіки','Detailed analytics · traffic sources and charts')+'</summary><div class="creator-metric-grid creator-metric-secondary">'+[metrics[2],metrics[5],metrics[6],metrics[7]].join('')+'</div>'+
     chart(d.daily)+
     '<div class="creator-discovery-grid">'+
      section(t('Джерела переглядів','Traffic sources'),listRows(d.traffic||[],sourceLabel,a.views),t('Як глядачі знаходять відео','How viewers find your videos'))+
@@ -94,7 +95,8 @@
      section(t('Пристрої перегляду','Viewing devices'),listRows(d.devices||[],deviceLabel,a.views),t('Де дивляться ваші відео','Where your videos are watched'))+
      section(t('Країни глядачів','Viewer countries'),listRows(d.countries||[],countryLabel,a.views),t('Основні країни за переглядами','Top countries by views'))+
     '</div><div class="creator-foot">'+t('Дані YouTube Analytics API, не оцінка. Звіти можуть надходити із затримкою. Оновлено: ','YouTube Analytics API data, not estimates. Reports may be delayed. Updated: ')+new Date(d.updatedAt).toLocaleString(ua()?'uk-UA':'en-US')+
-    ' · '+t('Кеш ~15 хвилин','Cache ~15 minutes')+'</div>';
+    ' · '+t('Кеш ~15 хвилин','Cache ~15 minutes')+'</div></details>'+
+    '<button type="button" class="creator-studio-jump" data-creator-open-platforms="1">'+t('Усі відео · порівняння · цілі ↗','Videos · comparisons · goals ↗')+'</button>';
  }
  function renderOther(connection){
   const p=providers.find(x=>x.id===connection.provider);
@@ -137,6 +139,7 @@
   if(yt&&$('#page-home')?.classList.contains('active'))load();
  }
  root.addEventListener('click',ev=>{
+  if(ev.target.closest('[data-creator-open-platforms]'))window.location.hash='#platforms';
   if(ev.target.closest('[data-creator-open-platforms]'))window.location.hash='#platforms';
   if(ev.target.closest('[data-creator-reauthorize]'))client.start('youtube');
  });
