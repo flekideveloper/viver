@@ -41,9 +41,12 @@ jobs:
           node --check auth-worker/src/index.js
           node --check tests/oauth.cjs
           node --check tests/smoke.cjs
+          node --check tests/studio.cjs
       - name: Install test dependency
         run: npm install --no-save --no-package-lock --prefer-offline jsdom@26
       - name: Run interactive DOM tests
         run: node tests/smoke.cjs
       - name: Run OAuth backend tests
         run: node tests/oauth.cjs
+      - name: Test Creator Studio interface
+        run: node tests/studio.cjs
