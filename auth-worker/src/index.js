@@ -123,6 +123,7 @@ async function callback(req,env,provider){
    await env.DB.prepare('DELETE FROM youtube_cache WHERE client_hash=?').bind(pending.client_hash).run();
    await env.DB.prepare('DELETE FROM youtube_snapshots WHERE client_hash=?').bind(pending.client_hash).run();
    await env.DB.prepare('DELETE FROM youtube_analytics_cache WHERE client_hash=?').bind(pending.client_hash).run();
+   await env.DB.prepare('DELETE FROM youtube_video_cache WHERE client_hash=?').bind(pending.client_hash).run();
   }
   await env.DB.prepare('INSERT INTO oauth_accounts(client_hash,provider,subject,label,avatar,token_enc,refresh_enc,expires_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?) ON CONFLICT(client_hash,provider) DO UPDATE SET subject=excluded.subject,label=excluded.label,avatar=excluded.avatar,token_enc=excluded.token_enc,refresh_enc=excluded.refresh_enc,expires_at=excluded.expires_at,updated_at=excluded.updated_at')
     .bind(pending.client_hash,provider,profile.id,profile.name.slice(0,120),profile.avatar.slice(0,500),access,refresh||old?.refresh_enc||null,expires,now).run();
@@ -343,6 +344,110 @@ async function youtubeAnalytics(req,env){
  return json({...payload,updatedAt:now,fromCache:false});
 }
 
+
+/* Creator video studio: owned public uploads, real video reports and retention. */
+const VIDEO_CACHE_MS=12*60*1000;
+const validVideo=id=>/^[A-Za-z0-9_-]{11}$/.test(id||'');
+async function ownedYoutube(req,env){
+ const capability=authHeader(req);
+ if(!capability)return {error:json({error:'Connection key required'},401)};
+ const clientHash=await hash(capability);
+ const row=await env.DB.prepare('SELECT * FROM oauth_accounts WHERE client_hash=? AND provider=?').bind(clientHash,'youtube').first();
+ if(!row)return {error:json({error:'youtube_not_connected'},404)};
+ const active=await refreshIfNeeded(env,row);
+ if(active.expired)return {error:json({error:'youtube_reconnect_required'},401)};
+ return {clientHash,row,accessToken:await decrypted(env,active.token_enc)};
+}
+function publicVideo(v){
+ const snippet=v.snippet||{},stats=v.statistics||{};
+ return {id:v.id,title:String(snippet.title||'').slice(0,180),publishedAt:snippet.publishedAt||'',
+  thumbnail:String(snippet.thumbnails?.medium?.url||snippet.thumbnails?.default?.url||'').slice(0,500),
+  views:asCount(stats.viewCount),likes:asCount(stats.likeCount),comments:asCount(stats.commentCount),
+  duration:v.contentDetails?.duration||'',url:'https://www.youtube.com/watch?v='+encodeURIComponent(v.id)};
+}
+async function videoCatalog(env,owner){
+ const cached=await env.DB.prepare('SELECT channel_id,payload,updated_at FROM youtube_video_cache WHERE client_hash=?').bind(owner.clientHash).first();
+ if(cached&&cached.channel_id===owner.row.subject&&Date.now()-cached.updated_at<VIDEO_CACHE_MS){
+  try{return {...JSON.parse(cached.payload),updatedAt:cached.updated_at,fromCache:true}}catch{}
+ }
+ const channels=await youtubeApi('channels?part=contentDetails&mine=true',owner.accessToken);
+ const channel=(channels.items||[]).find(x=>x.id===owner.row.subject);
+ const playlistId=channel?.contentDetails?.relatedPlaylists?.uploads;
+ if(!playlistId||!/^[A-Za-z0-9_-]+$/.test(playlistId))return {channelId:owner.row.subject,videos:[],updatedAt:Date.now()};
+ const listing=await youtubeApi('playlistItems?part=contentDetails&maxResults=50&playlistId='+encodeURIComponent(playlistId),owner.accessToken);
+ const ids=(listing.items||[]).map(x=>x.contentDetails?.videoId).filter(validVideo).slice(0,50);
+ let videos=[];
+ if(ids.length){
+  const details=await youtubeApi('videos?part=snippet,statistics,contentDetails,status&id='+ids.join(','),owner.accessToken);
+  const index=new Map((details.items||[]).map(x=>[x.id,x]));
+  videos=ids.map(id=>index.get(id)).filter(x=>x&&x.status?.privacyStatus==='public'&&x.snippet?.channelId===owner.row.subject).map(publicVideo);
+ }
+ const start=dateUTC(-7),end=dateUTC(-1);
+ try{
+  if(videos.length){
+   const report=await analyticsQuery(owner.accessToken,{startDate:start,endDate:end,dimensions:'video',
+    filters:'video=='+videos.map(x=>x.id).join(','),metrics:'views,likes,comments,subscribersGained,estimatedMinutesWatched,averageViewDuration',
+    sort:'-views',maxResults:50});
+   const stats=new Map(report.map(r=>[r.video,r]));
+   videos=videos.map(v=>{
+    const r=stats.get(v.id);
+    return {...v,week:r?{views:asCount(r.views),likes:asCount(r.likes),comments:asCount(r.comments),
+     subscribersGained:asCount(r.subscribersGained),watchMinutes:asCount(r.estimatedMinutesWatched),
+     avgViewSeconds:asCount(r.averageViewDuration)}:null};
+   });
+  }
+ }catch(e){console.warn('VIVER video weekly analytics unavailable',e.message)}
+ const timestamp=Date.now(),payload={channelId:owner.row.subject,videos,reportPeriod:{start,end}};
+ await env.DB.prepare('INSERT INTO youtube_video_cache(client_hash,channel_id,payload,updated_at) VALUES(?,?,?,?) ON CONFLICT(client_hash) DO UPDATE SET channel_id=excluded.channel_id,payload=excluded.payload,updated_at=excluded.updated_at')
+  .bind(owner.clientHash,owner.row.subject,JSON.stringify(payload),timestamp).run();
+ return {...payload,updatedAt:timestamp,fromCache:false};
+}
+async function youtubeVideoLibrary(req,env){
+ const o=await ownedYoutube(req,env);if(o.error)return o.error;
+ try{return json(await videoCatalog(env,o))}
+ catch(e){console.warn('VIVER video catalog unavailable',e.message);return json({error:'youtube_videos_unavailable'},503)}
+}
+async function youtubeVideoRetention(req,env,id){
+ const o=await ownedYoutube(req,env);if(o.error)return o.error;
+ if(!validVideo(id))return json({error:'invalid_video_id'},400);
+ try{
+  const catalog=await videoCatalog(env,o);
+  if(!catalog.videos.some(v=>v.id===id))return json({error:'video_not_in_channel'},404);
+  const end=dateUTC(-1);
+  const result=await analyticsQuery(o.accessToken,{startDate:'2015-01-01',endDate:end,filters:'video=='+id,
+   dimensions:'elapsedVideoTimeRatio',metrics:'audienceWatchRatio',sort:'elapsedVideoTimeRatio'});
+  return json({id,points:result.map(x=>({position:Number(x.elapsedVideoTimeRatio),ratio:Number(x.audienceWatchRatio)}))
+    .filter(x=>Number.isFinite(x.position)&&Number.isFinite(x.ratio)&&x.position>=0&&x.position<=1&&x.ratio>=0).slice(0,200),
+   period:{end},note:'audience retention can be unavailable for low traffic or recent uploads'});
+ }catch(e){console.warn('VIVER retention report unavailable',e.message);return json({error:'youtube_retention_unavailable'},503)}
+}
+async function youtubeVideoCompare(req,env){
+ const o=await ownedYoutube(req,env);if(o.error)return o.error;
+ const url=new URL(req.url),a=url.searchParams.get('a'),b=url.searchParams.get('b');
+ if(!validVideo(a)||!validVideo(b)||a===b)return json({error:'invalid_video_ids'},400);
+ try{
+  const catalog=await videoCatalog(env,o);
+  const selected=[a,b].map(id=>catalog.videos.find(v=>v.id===id));
+  if(selected.some(x=>!x))return json({error:'video_not_in_channel'},404);
+  const metrics='views,likes,comments,subscribersGained,estimatedMinutesWatched,averageViewDuration';
+  const reports=await Promise.allSettled(selected.map(async v=>{
+   const start=v.publishedAt?.slice(0,10);
+   if(!/^\d{4}-\d\d-\d\d$/.test(start||''))return {...v,report:null};
+   const expected=dateShift(start,6),end=expected<dateUTC(-1)?expected:dateUTC(-1);
+   if(end<start)return {...v,report:null,partial:true};
+   const days=Math.round((Date.parse(end)-Date.parse(start))/86400000)+1;
+   const rows=await analyticsQuery(o.accessToken,{startDate:start,endDate:end,filters:'video=='+v.id,metrics});
+   const r=rows[0]||{};
+   return {id:v.id,title:v.title,publishedAt:v.publishedAt,period:{start,end,days,complete:days===7},
+    report:{views:asCount(r.views)||0,likes:asCount(r.likes)||0,comments:asCount(r.comments)||0,
+     subscribersGained:asCount(r.subscribersGained)||0,watchMinutes:asCount(r.estimatedMinutesWatched)||0,
+     avgViewSeconds:asCount(r.averageViewDuration)||0}};
+  }));
+  return json({videos:reports.map((r,i)=>r.status==='fulfilled'?r.value:{id:selected[i].id,title:selected[i].title,error:'analytics_unavailable'}),
+   comparable:reports.every(r=>r.status==='fulfilled'&&r.value?.period?.complete)});
+ }catch(e){return json({error:'youtube_compare_unavailable'},503)}
+}
+
 async function connections(req,env){
  const token=authHeader(req);if(!token)return json({error:'Connection key required'},401);
  const clientHash=await hash(token);
@@ -362,6 +467,7 @@ async function disconnect(req,env,provider){
   await env.DB.prepare('DELETE FROM youtube_cache WHERE client_hash=?').bind(hashKey).run();
   await env.DB.prepare('DELETE FROM youtube_snapshots WHERE client_hash=?').bind(hashKey).run();
   await env.DB.prepare('DELETE FROM youtube_analytics_cache WHERE client_hash=?').bind(hashKey).run();
+  await env.DB.prepare('DELETE FROM youtube_video_cache WHERE client_hash=?').bind(hashKey).run();
  }
  await env.DB.prepare('DELETE FROM oauth_accounts WHERE client_hash=? AND provider=?').bind(hashKey,provider).run();
  return json({ok:true});
@@ -377,6 +483,10 @@ export default {
    if(method==='GET'&&path==='/connections')return connections(req,env);
    if(method==='GET'&&path==='/youtube/stats')return youtubeStats(req,env);
    if(method==='GET'&&path==='/youtube/analytics')return youtubeAnalytics(req,env);
+   if(method==='GET'&&path==='/youtube/videos')return youtubeVideoLibrary(req,env);
+   if(method==='GET'&&path==='/youtube/videos/compare')return youtubeVideoCompare(req,env);
+   const retention=/^\/youtube\/videos\/([A-Za-z0-9_-]{11})\/retention$/.exec(path);
+   if(method==='GET'&&retention)return youtubeVideoRetention(req,env,retention[1]);
    const connect=/^\/auth\/start\/(youtube|tiktok|twitch|x)$/.exec(path);
    if(method==='POST'&&connect)return start(req,env,connect[1]);
    const callbackMatch=/^\/auth\/callback\/(youtube|tiktok|twitch|x)$/.exec(path);
