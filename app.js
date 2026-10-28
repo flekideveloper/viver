@@ -209,7 +209,7 @@
    if(delta<0)continue;
    item.notified=true;changed=true;
    if(delta<5*60*1000){
-    if('Notification' in window&&Notification.permission==='granted'&&document.visibilityState==='visible'){
+    if('Notification' in window&&Notification.permission==='granted'){
      try{new Notification('VIVER · Reminder',{body:item.title,tag:'viver-'+item.id})}catch{toast('Reminder: '+item.title)}
     }else if(document.visibilityState==='visible')toast('Reminder: '+item.title);
    }
