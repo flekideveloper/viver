@@ -164,6 +164,42 @@ const vm=require('node:vm');
  assert.equal($$('.platform-row').length,0,'inactive social account rows removed');
  assert.equal($('.account-icon'),null,'fake account badge removed');
  assert($('#analytics-chart').textContent.includes('200'),'latest imported metric shown');
+ // Real YouTube stats UI is shown only for linked account; never leaks token in page source.
+ let connectedYouTube=false,youtubeApiCalls=0;
+ const youtubeFixture={
+  channel:{id:'UCabcdefghijklmnopqrstuv',title:'My Creator Channel',description:'Test description',avatar:'https://example.com/pic.jpg',hiddenSubscribers:false},
+  totals:{views:12345,subscribers:987,videos:12},
+  recent:[{id:'AbCdEfGhIjK',title:'Latest upload',publishedAt:'2026-10-23T12:00:00Z',views:456,likes:23,url:'https://www.youtube.com/watch?v=AbCdEfGhIjK'}],
+  history:[{date:'2026-10-27',views:12000,subscribers:980,videos:11},{date:'2026-10-28',views:12345,subscribers:987,videos:12}],
+  updatedAt:Date.now()
+ };
+ window.fetch=async url=>{
+  if(String(url).endsWith('/connections'))return {ok:true,json:async()=>({providers:{youtube:true,tiktok:false,twitch:false,x:false},connections:connectedYouTube?[{provider:'youtube',connected:true,label:'My Creator Channel'}]:[]})};
+  if(String(url).endsWith('/youtube/stats')){youtubeApiCalls++;return {ok:true,json:async()=>youtubeFixture}}
+  throw Error('Unexpected API path '+url);
+ };
+ vm.runInContext(read('youtube.js'),context,{filename:'youtube.js'});
+ click('[data-page="platforms"]');
+ await window.VIVERConnections.refresh();
+ await new Promise(r=>setTimeout(r,15));
+ assert.equal($('#youtube-live-panel').hidden,true,'YouTube data remains hidden when account is disconnected');
+ assert.equal(youtubeApiCalls,0,'never fetch user stats before account authorization');
+ connectedYouTube=true;
+ await window.VIVERConnections.refresh();
+ await new Promise(r=>setTimeout(r,60));
+ assert.equal($('#youtube-live-panel').hidden,false,'connected YouTube panel visible');
+ assert($('#youtube-live-metrics').textContent.includes('12'), 'actual channel video count displayed');
+ assert($('#youtube-live-metrics').textContent.includes('987'),'actual subscriber count displayed');
+ assert($('#youtube-channel-profile').textContent.includes('My Creator Channel'),'authorized channel name displayed');
+ assert($('#youtube-latest').textContent.includes('Latest upload'),'latest public videos visible');
+ assert.equal($('#youtube-history').hidden,false,'actual daily history creates chart');
+ assert.equal(youtubeApiCalls,1,'stats fetched automatically once after connecting');
+ click('#youtube-refresh');
+ await new Promise(r=>setTimeout(r,15));
+ assert.equal(youtubeApiCalls,2,'manual refresh requests server cache');
+ connectedYouTube=false;
+ await window.VIVERConnections.refresh();
+ assert.equal($('#youtube-live-panel').hidden,true,'disconnect hides YouTube statistics');
  const saved=JSON.parse(window.localStorage.getItem('viver-workspace-v1'));
  assert.equal(saved.plans[0].checks[0].text,'Make thumbnail','checklist persisted');
  assert.equal(saved.reminders.find(x=>x.id===recurring.id).repeat,'weekly','recurrence persisted');
