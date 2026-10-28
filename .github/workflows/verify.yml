@@ -7,6 +7,8 @@ on:
     paths:
       - 'app.js'
       - 'features.js'
+      - 'connections.js'
+      - 'auth-worker/**'
       - 'index.html'
       - 'tests/**'
       - '.github/workflows/verify.yml'
@@ -29,8 +31,13 @@ jobs:
         run: |
           node --check app.js
           node --check features.js
+          node --check connections.js
+          node --check auth-worker/src/index.js
+          node --check tests/oauth.cjs
           node --check tests/smoke.cjs
       - name: Install test dependency
         run: npm install --no-save --no-package-lock --prefer-offline jsdom@26
       - name: Run interactive DOM tests
         run: node tests/smoke.cjs
+      - name: Run OAuth backend tests
+        run: node tests/oauth.cjs
