@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b0e15">
+  <meta name="description" content="VIVER — a creator's workspace for ideas, planning, reminders and social media insights.">
+  <title>VIVER — Creator Workspace</title>
+  <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./style.css?v=1">
+  <script src="./app.js?v=1" defer></script>
+</head>
+<body>
+<svg aria-hidden="true" class="icon-sprite" xmlns="http://www.w3.org/2000/svg">
+ <symbol id="ic-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.6"/><rect x="14" y="3" width="7" height="7" rx="1.6"/><rect x="3" y="14" width="7" height="7" rx="1.6"/><rect x="14" y="14" width="7" height="7" rx="1.6"/></symbol>
+ <symbol id="ic-chart" viewBox="0 0 24 24"><path d="M4 20V12m6 8V4m6 16v-9m4 9V8"/></symbol>
+ <symbol id="ic-plug" viewBox="0 0 24 24"><path d="M9 3v6m6-6v6M6 9h12v3a6 6 0 0 1-6 6v3m-7-9h2m10 0h2"/></symbol>
+ <symbol id="ic-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4m10-4v4M3 10h18m-13 5h3m3 0h3"/></symbol>
+ <symbol id="ic-bell" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 8-3 8-3 10h18c0-2-3-2-3-10Zm-8 13h4"/></symbol>
+ <symbol id="ic-board" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 8h4v4H8zM15 8h2m-2 4h2M8 16h8"/></symbol>
+ <symbol id="ic-settings" viewBox="0 0 24 24"><path d="M10 3h4l.7 2.5 2.1.9 2.3-1.3 2.8 2.8-1.3 2.3.9 2.1L24 13v0m-3 0-1.5.7-.9 2.1 1.3 2.3-2.8 2.8-2.3-1.3-2.1.9L14 23h-4l-.7-2.5-2.1-.9-2.3 1.3-2.8-2.8 1.3-2.3-.9-2.1L0 13v-2l2.5-.7.9-2.1L2.1 5.9l2.8-2.8 2.3 1.3 2.1-.9L10 1"/><circle cx="12" cy="12" r="3"/></symbol>
+ <symbol id="ic-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+ <symbol id="ic-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></symbol>
+ <symbol id="ic-external" viewBox="0 0 24 24"><path d="M13 5h6v6m0-6-9 9M19 13v6H5V5h6"/></symbol>
+ <symbol id="ic-check" viewBox="0 0 24 24"><path d="m4 12 5 5L20 6"/></symbol>
+ <symbol id="ic-trash" viewBox="0 0 24 24"><path d="M4 7h16m-13 0 1 14h8l1-14M9 7V4h6v3m-5 4v6m4-6v6"/></symbol>
+ <symbol id="ic-edit" viewBox="0 0 24 24"><path d="m4 20 5-.9L20 8a2.2 2.2 0 0 0-4-4L5 15l-1 5Zm9-13 4 4"/></symbol>
+ <symbol id="ic-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+ <symbol id="ic-search" viewBox="0 0 24 24"><circle cx="10.7" cy="10.7" r="6.7"/><path d="m16 16 5 5"/></symbol>
+ <symbol id="ic-close" viewBox="0 0 24 24"><path d="M5 5l14 14M19 5 5 19"/></symbol>
+ <symbol id="ic-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></symbol>
+ <symbol id="ic-moon" viewBox="0 0 24 24"><path d="M20 15a8.5 8.5 0 0 1-11-11 8.5 8.5 0 1 0 11 11Z"/></symbol>
+ <symbol id="ic-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3M5 5l2 2m10 10 2 2M19 5l-2 2M7 17l-2 2"/></symbol>
+ <symbol id="ic-download" viewBox="0 0 24 24"><path d="M12 3v13m-5-5 5 5 5-5M4 18v3h16v-3"/></symbol>
+ <symbol id="ic-upload" viewBox="0 0 24 24"><path d="M12 16V3m-5 5 5-5 5 5M4 18v3h16v-3"/></symbol>
+ <symbol id="ic-eye" viewBox="0 0 24 24"><path d="M2 12s4-6 10-6 10 6 10 6-4 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="2.6"/></symbol>
+ <symbol id="ic-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-10v.1"/></symbol>
+ <symbol id="ic-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2"/></symbol>
+ <symbol id="ic-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+ <symbol id="ic-spark" viewBox="0 0 24 24"><path d="m12 2 2.5 7.5L22 12l-7.5 2.5L12 22l-2.5-7.5L2 12l7.5-2.5L12 2Z"/></symbol>
+ <symbol id="ic-link" viewBox="0 0 24 24"><path d="M9 15l6-6M8 9H6a5 5 0 0 0 0 10h4a5 5 0 0 0 5-5m-6-4a5 5 0 0 1 5-5h4a5 5 0 0 1 0 10h-2"/></symbol>
+ <symbol id="ic-zoom" viewBox="0 0 24 24"><path d="M12 5v14m-7-7h14"/></symbol>
+</svg>
+<div class="app">
+ <aside class="sidebar" id="sidebar">
+   <div class="brand"><div class="brand-symbol"><svg viewBox="0 0 44 44"><path fill="currentColor" d="M7 10h8l7 17 7-17h8L24 35h-5Z"/></svg></div><div class="brand-type"><strong>VIVER<span>.</span></strong><small>CREATOR WORKSPACE</small></div></div>
+   <div class="workspace-switch"><span class="workspace-avatar">V</span><span class="workspace-details"><strong>My workspace</strong><small>Personal space</small></span><span class="workspace-caret">⌄</span></div>
+   <nav class="side-nav" aria-label="Main navigation">
+     <p class="nav-caption">WORKSPACE</p>
+     <button class="nav-item active" data-view="dashboard"><svg><use href="#ic-grid"/></svg><span data-i18n="nav-dashboard">Overview</span></button>
+     <button class="nav-item" data-view="analytics"><svg><use href="#ic-chart"/></svg><span data-i18n="nav-analytics">Analytics</span></button>
+     <button class="nav-item" data-view="connections"><svg><use href="#ic-plug"/></svg><span data-i18n="nav-connections">Connections</span></button>
+     <p class="nav-caption nav-second">CREATE & ORGANIZE</p>
+     <button class="nav-item" data-view="planner"><svg><use href="#ic-calendar"/></svg><span data-i18n="nav-planner">Content planner</span><span class="nav-pill" id="planner-count"></span></button>
+     <button class="nav-item" data-view="reminders"><svg><use href="#ic-bell"/></svg><span data-i18n="nav-reminders">Reminders</span><span class="nav-pill" id="reminders-count"></span></button>
+     <button class="nav-item" data-view="ideas"><svg><use href="#ic-board"/></svg><span data-i18n="nav-ideas">Idea board</span></button>
+   </nav>
+   <div class="sidebar-footer">
+     <div class="sidebar-tip"><div class="tip-symbol"><svg><use href="#ic-spark"/></svg></div><strong>Make space for ideas.</strong><p>Everything you want to make, together in one place.</p><button data-view="ideas">Open idea board <svg><use href="#ic-arrow"/></svg></button></div>
+     <button class="nav-item settings-nav" data-view="settings"><svg><use href="#ic-settings"/></svg><span data-i18n="nav-settings">Settings</span></button>
+     <div class="storage-status"><span class="storage-dot"></span><span>Saved on this device</span></div>
+   </div>
+ </aside>
+ <div class="mobile-shade" id="mobile-shade"></div>
+ <div class="app-body">
+  <header class="topbar">
+   <div class="topbar-left"><button class="icon-button mobile-menu" id="menu-toggle" aria-label="Open menu"><svg><use href="#ic-menu"/></svg></button><span class="top-overline">WORKSPACE</span><span class="top-sep">/</span><strong id="current-page">Overview</strong></div>
+   <div class="topbar-right"><span class="today" id="today-label"></span><button id="top-search" class="icon-button search-button" aria-label="Search workspace" title="Search (Ctrl+K)"><svg><use href="#ic-search"/></svg></button><div class="quick-wrap"><button id="quick-add" class="button button-primary button-quick"><svg><use href="#ic-plus"/></svg><span>Quick create</span></button><div class="quick-menu" id="quick-menu" hidden><button data-quick="ideas"><svg><use href="#ic-board"/></svg>New sticky note</button><button data-quick="reminders"><svg><use href="#ic-bell"/></svg>New reminder</button><button data-quick="planner"><svg><use href="#ic-calendar"/></svg>New content plan</button></div></div><span class="user-badge" title="Personal workspace">V</span></div>
+  </header>
+  <main id="main" tabindex="-1">
+   <section class="view active" id="view-dashboard" aria-labelledby="dash-title">
+    <div class="page-intro"><div><div class="eyebrow"><span class="eyebrow-dot"></span>YOUR CREATIVE HOME</div><h1 id="dash-title">Your space to <em>create.</em></h1><p>Ideas, plans and everything in between. Pick up where you left off.</p></div><div class="intro-decoration" aria-hidden="true"><span class="deco-one"></span><span class="deco-two"></span><span class="deco-three">✳</span></div></div>
+    <div class="dash-stat-row">
+     <div class="stat-card"><div class="stat-icon lavender"><svg><use href="#ic-calendar"/></svg></div><span>Content plans</span><strong id="dash-plans">0</strong><small>Things on your calendar</small></div>
+     <div class="stat-card"><div class="stat-icon peach"><svg><use href="#ic-bell"/></svg></div><span>Open reminders</span><strong id="dash-reminders">0</strong><small>Things worth remembering</small></div>
+     <div class="stat-card"><div class="stat-icon mint"><svg><use href="#ic-board"/></svg></div><span>Ideas captured</span><strong id="dash-ideas">0</strong><small>Sparks on your whiteboard</small></div>
+    </div>
+    <div class="dash-grid">
+     <div class="surface dash-upcoming"><div class="section-head"><div><span class="micro-label">ON YOUR RADAR</span><h2>Coming up</h2></div><button class="text-link" data-view="reminders">All reminders <svg><use href="#ic-arrow"/></svg></button></div><div id="dash-upcoming" class="dash-items"></div></div>
+     <div class="surface dash-board"><div class="section-head"><div><span class="micro-label">CREATIVE CORNER</span><h2>Idea board</h2></div><button class="text-link" data-view="ideas">Open board <svg><use href="#ic-arrow"/></svg></button></div><div class="mini-board" id="dash-mini-board"><div class="mini-tape one"></div><div class="mini-sticky yellow"><span>THINK IT.</span><strong>MAKE IT.</strong></div><div class="mini-sticky purple"><span>YOUR NEXT</span><strong>BIG IDEA ✷</strong></div><div class="mini-tape two"></div></div><p class="subtle board-caption" id="dash-board-caption">An empty board is a world of possibilities.</p></div>
+     <div class="surface dash-schedule"><div class="section-head"><div><span class="micro-label">WHAT'S NEXT</span><h2>Content pipeline</h2></div><button class="text-link" data-view="planner">Open planner <svg><use href="#ic-arrow"/></svg></button></div><div id="dash-pipeline"></div></div>
+     <div class="surface dash-connect"><div class="section-head"><div><span class="micro-label">YOUR CHANNELS</span><h2>Platform insights</h2></div><button class="text-link" data-view="connections">Manage <svg><use href="#ic-arrow"/></svg></button></div><div class="platform-mini-list" id="dash-platform-list"></div><p class="subtle disclaimer">No fabricated metrics — your real numbers appear only after secure API integrations are configured.</p></div>
+    </div>
+   </section>
+   <section class="view" id="view-analytics" aria-labelledby="analytics-title">
+    <div class="section-intro"><div class="eyebrow">DATA & PERFORMANCE</div><h1 id="analytics-title">Understand your <em>growth.</em></h1><p>A place for real cross-platform analytics. We won't show invented views or follower counts.</p></div>
+    <div class="analytics-banner"><div class="analytics-orbit" aria-hidden="true">✳</div><div><span class="banner-kicker">ANALYTICS STATUS</span><h2>Your numbers, when you're connected.</h2><p>Official analytics require each platform's permission and a secure server-side connection. VIVER does not have your account data yet.</p><button class="button button-light" data-view="connections"><svg><use href="#ic-link"/></svg> Explore connections</button></div></div>
+    <div class="analytics-metrics"><div class="metric"><span>Combined followers</span><strong>—</strong><small>No connected data</small></div><div class="metric"><span>Total views</span><strong>—</strong><small>No connected data</small></div><div class="metric"><span>Engagement rate</span><strong>—</strong><small>No connected data</small></div><div class="metric"><span>Content published</span><strong>—</strong><small>No connected data</small></div></div>
+    <div class="surface analytics-area"><div class="section-head"><div><span class="micro-label">PERFORMANCE OVER TIME</span><h2>Audience & engagement</h2></div><span class="quiet-pill">Awaiting data</span></div><div class="blank-chart"><svg class="blank-chart-icon"><use href="#ic-chart"/></svg><strong>Nothing to chart yet</strong><p>When a platform is securely connected, analytics can be displayed here using only the data its API permits.</p></div></div>
+    <div class="platform-section-head"><h2>Platform breakdown</h2><p>Not connected</p></div><div class="analytics-platforms" id="analytics-platforms"></div>
+   </section>
+   <section class="view" id="view-connections" aria-labelledby="connections-title">
+    <div class="section-intro"><div class="eyebrow">YOUR CHANNELS</div><h1 id="connections-title">Connect your <em>world.</em></h1><p>Bring your creator accounts together. Real connections use official permissions, never your passwords.</p></div>
+    <div class="connection-warning"><svg><use href="#ic-info"/></svg><div><strong>Integrations are not active in this version.</strong><p>The site is hosted on GitHub Pages. OAuth credentials, consent screens and a secure backend must be set up for each provider before any account can be connected or statistics loaded.</p></div></div>
+    <div class="connection-grid" id="provider-grid">
+     <article class="provider-card" data-provider="youtube"><div class="provider-head"><div class="provider-logo youtube">▶</div><span class="connection-label">Not connected</span></div><h2>YouTube</h2><p>Video performance, views, subscribers and channel analytics where authorized.</p><div class="provider-foot"><span>Google OAuth & YouTube Analytics API</span><button class="button button-outline" data-provider-info="youtube">Setup info <svg><use href="#ic-arrow"/></svg></button></div></article>
+     <article class="provider-card" data-provider="tiktok"><div class="provider-head"><div class="provider-logo tiktok">♪</div><span class="connection-label">Not connected</span></div><h2>TikTok</h2><p>Profile insights and permitted video metrics through approved TikTok APIs.</p><div class="provider-foot"><span>TikTok Login Kit & API access</span><button class="button button-outline" data-provider-info="tiktok">Setup info <svg><use href="#ic-arrow"/></svg></button></div></article>
+     <article class="provider-card" data-provider="twitch"><div class="provider-head"><div class="provider-logo twitch">◧</div><span class="connection-label">Not connected</span></div><h2>Twitch</h2><p>Channel data, streams, followers and available performance metrics.</p><div class="provider-foot"><span>Twitch OAuth & Helix API</span><button class="button button-outline" data-provider-info="twitch">Setup info <svg><use href="#ic-arrow"/></svg></button></div></article>
+     <article class="provider-card" data-provider="x"><div class="provider-head"><div class="provider-logo x">𝕏</div><span class="connection-label">Not connected</span></div><h2>X (Twitter)</h2><p>Account and post statistics within the API access tier and scopes available.</p><div class="provider-foot"><span>X OAuth & API access</span><button class="button button-outline" data-provider-info="x">Setup info <svg><use href="#ic-arrow"/></svg></button></div></article>
+    </div>
+   </section>
+   <section class="view" id="view-planner" aria-labelledby="planner-title">
+    <div class="section-intro split"><div><div class="eyebrow">CONTENT STUDIO</div><h1 id="planner-title">Make a <em>plan.</em></h1><p>Keep your future posts organized, from first draft to published.</p></div><span class="pill-count" id="planner-total">0 entries</span></div>
+    <div class="planner-layout">
+     <div class="surface form-panel"><div class="section-head"><div><span class="micro-label">NEW CONTENT</span><h2>Add to your pipeline</h2></div><svg class="section-icon"><use href="#ic-plus"/></svg></div>
+      <form id="plan-form" autocomplete="off">
+       <label for="plan-title">Content title</label><input id="plan-title" required maxlength="110" placeholder="e.g. New Minecraft video">
+       <label for="plan-platform">Platform</label><select id="plan-platform"><option value="youtube">YouTube</option><option value="tiktok">TikTok</option><option value="twitch">Twitch</option><option value="x">X (Twitter)</option><option value="other">Other</option></select>
+       <label for="plan-date">Scheduled date & time</label><input type="datetime-local" id="plan-date" required>
+       <label for="plan-status">Stage</label><select id="plan-status"><option value="idea">Idea</option><option value="draft">Drafting</option><option value="ready">Ready</option><option value="published">Published</option></select>
+       <label for="plan-notes">Notes (optional)</label><textarea id="plan-notes" maxlength="350" placeholder="A few notes about this content…" rows="3"></textarea>
+       <button class="button button-primary form-submit" type="submit"><svg><use href="#ic-plus"/></svg> Add content</button>
+      </form>
+     </div>
+     <div class="surface list-panel"><div class="section-head"><div><span class="micro-label">EDITORIAL PIPELINE</span><h2>Your content</h2></div><select id="plan-filter" class="inline-filter" aria-label="Filter content"><option value="all">All stages</option><option value="idea">Ideas</option><option value="draft">Drafts</option><option value="ready">Ready</option><option value="published">Published</option></select></div><div class="pipeline-list" id="plan-list"></div></div>
+    </div>
+   </section>
+   <section class="view" id="view-reminders" aria-labelledby="reminders-title">
+    <div class="section-intro split"><div><div class="eyebrow">STAY ON TRACK</div><h1 id="reminders-title">Don't forget <em>a thing.</em></h1><p>Little reminders for the things that matter to you.</p></div><button class="button button-secondary" id="enable-notifications"><svg><use href="#ic-bell"/></svg> Enable alerts</button></div>
+    <div class="reminder-layout">
+     <div class="surface form-panel"><div class="section-head"><div><span class="micro-label">CAPTURE A THOUGHT</span><h2>New reminder</h2></div><svg class="section-icon"><use href="#ic-clock"/></svg></div><form id="reminder-form">
+       <label for="reminder-title">What do you need to do?</label><input id="reminder-title" required maxlength="110" placeholder="e.g. Edit my next video">
+       <label for="reminder-due">When?</label><input id="reminder-due" type="datetime-local" required>
+       <label for="reminder-priority">Priority</label><select id="reminder-priority"><option value="normal">Normal priority</option><option value="high">High priority</option><option value="low">Low priority</option></select>
+       <button class="button button-primary form-submit" type="submit"><svg><use href="#ic-plus"/></svg> Add reminder</button>
+      </form><p class="form-note">Reminders are stored on this device. Browser alerts work while VIVER is open and permission is granted.</p></div>
+     <div class="surface list-panel"><div class="section-head"><div><span class="micro-label">YOUR TO-DO LIST</span><h2>Reminders</h2></div><div class="filter-tabs" id="reminder-filters"><button class="filter-tab active" data-reminder-filter="open">Open</button><button class="filter-tab" data-reminder-filter="all">All</button><button class="filter-tab" data-reminder-filter="done">Done</button></div></div><div id="reminder-list" class="reminder-list"></div></div>
+    </div>
+   </section>
+   <section class="view" id="view-ideas" aria-labelledby="ideas-title">
+    <div class="section-intro split board-title-row"><div><div class="eyebrow">CREATIVE SPACE</div><h1 id="ideas-title">The <em>idea board.</em></h1><p>A completely free whiteboard. Collect your thoughts on colorful sticky notes.</p></div><span class="board-note-count" id="board-note-count">0 notes</span></div>
+    <div class="whiteboard-shell">
+     <div class="board-toolbar"><div class="board-tools-left"><span class="tool-label">STICKY COLORS</span><div class="color-swatch-row" id="note-colors"><button class="color-swatch selected" data-color="yellow" style="--swatch:#ffe28c" aria-label="Yellow" title="Yellow"></button><button class="color-swatch" data-color="pink" style="--swatch:#ffb9d5" aria-label="Pink" title="Pink"></button><button class="color-swatch" data-color="lavender" style="--swatch:#cfc1ff" aria-label="Lavender" title="Lavender"></button><button class="color-swatch" data-color="mint" style="--swatch:#a7ead4" aria-label="Mint" title="Mint"></button><button class="color-swatch" data-color="blue" style="--swatch:#a7dfff" aria-label="Blue" title="Blue"></button><button class="color-swatch" data-color="peach" style="--swatch:#ffcca7" aria-label="Peach" title="Peach"></button></div><span class="tool-divider"></span><button class="button button-primary board-add" id="board-add"><svg><use href="#ic-plus"/></svg> Add sticky</button></div><div class="board-tools-right"><button class="icon-button board-control" id="board-zoom-out" aria-label="Zoom out" title="Zoom out">−</button><span id="board-zoom">100%</span><button class="icon-button board-control" id="board-zoom-in" aria-label="Zoom in" title="Zoom in">+</button><button class="button button-quiet" id="board-reset-view">Reset view</button><button class="icon-button board-control board-trash" id="board-clear" title="Delete all notes" aria-label="Delete all notes"><svg><use href="#ic-trash"/></svg></button></div></div>
+     <div class="whiteboard-scroll" id="whiteboard-scroll"><div class="whiteboard-stage" id="whiteboard-stage"><div id="board-notes" class="board-notes"></div><div class="board-placeholder" id="board-placeholder"><div class="placeholder-art"><span class="placeholder-sticky p-a">Your<br>ideas ✦</span><span class="placeholder-sticky p-b">START<br>HERE</span></div><h3>Big things start with small notes.</h3><p>Add a sticky note to make this board yours. Drag cards by their top edge.</p><button class="button button-dark" id="empty-add"><svg><use href="#ic-plus"/></svg> Make your first note</button></div></div></div>
+     <div class="whiteboard-footer"><span>✷ Double-click the board to add a note</span><span>Drag the top of a sticky to move it • Changes save automatically</span></div>
+    </div>
+   </section>
+   <section class="view" id="view-settings" aria-labelledby="settings-title">
+    <div class="section-intro"><div class="eyebrow">MAKE IT YOURS</div><h1 id="settings-title">Your <em>workspace.</em></h1><p>Keep VIVER feeling the way you like it.</p></div>
+    <div class="settings-grid">
+     <div class="surface setting-card"><div class="section-head"><div><span class="micro-label">APPEARANCE</span><h2>Theme</h2></div><svg class="section-icon"><use href="#ic-sun"/></svg></div><p>Choose how your creator space looks.</p><div class="theme-choices"><button class="theme-choice selected" data-theme-choice="dark"><span class="theme-sample dark-sample"><i></i><b></b></span><strong>Midnight</strong><small>Dark</small></button><button class="theme-choice" data-theme-choice="light"><span class="theme-sample light-sample"><i></i><b></b></span><strong>Daylight</strong><small>Light</small></button></div></div>
+     <div class="surface setting-card"><div class="section-head"><div><span class="micro-label">PREFERENCES</span><h2>Language</h2></div><svg class="section-icon"><use href="#ic-settings"/></svg></div><p>Choose your workspace language.</p><label for="lang-select">Interface language</label><select id="lang-select"><option value="en">English</option><option value="uk">Українська</option></select><p class="setting-hint">More languages can be added in later versions.</p></div>
+     <div class="surface setting-card"><div class="section-head"><div><span class="micro-label">YOUR DATA</span><h2>Backup & restore</h2></div><svg class="section-icon"><use href="#ic-download"/></svg></div><p>Your ideas and plans are kept locally in this browser. Export a backup to move them to another device.</p><div class="setting-buttons"><button class="button button-secondary" id="export-data"><svg><use href="#ic-download"/></svg> Export JSON</button><label class="button button-outline upload-label" for="import-data"><svg><use href="#ic-upload"/></svg> Import JSON<input type="file" accept="application/json,.json" id="import-data" hidden></label></div></div>
+     <div class="surface setting-card"><div class="section-head"><div><span class="micro-label">NOTIFICATIONS</span><h2>Reminder alerts</h2></div><svg class="section-icon"><use href="#ic-bell"/></svg></div><p>Get a notification when a reminder is due, as long as VIVER is open and your browser allows it.</p><button class="button button-secondary" id="settings-enable-notifications"><svg><use href="#ic-bell"/></svg> Manage browser alerts</button><small id="notifications-status" class="setting-hint"></small></div>
+     <div class="surface setting-card danger-setting"><div class="section-head"><div><span class="micro-label">DANGER ZONE</span><h2>Start fresh</h2></div><svg class="section-icon"><use href="#ic-trash"/></svg></div><p>Remove every locally saved note, reminder and content plan from this device. This can't be undone.</p><button class="button button-danger" id="reset-data"><svg><use href="#ic-trash"/></svg> Delete local workspace</button></div>
+     <div class="surface setting-card about-setting"><div class="section-head"><div><span class="micro-label">ABOUT VIVER</span><h2>Made for creators.</h2></div><svg class="section-icon"><use href="#ic-spark"/></svg></div><div class="about-logo">VIVER<span>.</span></div><p>One place to think, plan and create. Your workspace, your way.</p><span class="version-label">VIVER v0.1 • Local-first alpha</span></div>
+    </div>
+   </section>
+  </main>
+ </div>
+</div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<dialog id="provider-dialog" class="provider-dialog"><form method="dialog"><button class="dialog-close" aria-label="Close"><svg><use href="#ic-close"/></svg></button></form><div id="provider-dialog-content"></div></dialog>
+<dialog id="search-dialog" class="search-dialog"><form method="dialog"><button class="dialog-close" aria-label="Close"><svg><use href="#ic-close"/></svg></button></form><div class="search-input-wrap"><svg><use href="#ic-search"/></svg><input id="global-search-input" placeholder="Search your workspace…" autocomplete="off"></div><div id="global-search-results"></div><p class="search-hint">Esc to close · Ctrl+K to open</p></dialog>
+</body>
+</html>
