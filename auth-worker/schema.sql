@@ -56,3 +56,24 @@ CREATE TABLE IF NOT EXISTS youtube_video_cache (
  payload TEXT NOT NULL,
  updated_at INTEGER NOT NULL
 );
+
+
+-- Independently authenticated Twitch, TikTok and X creator insights, 15min cache and observed history.
+CREATE TABLE IF NOT EXISTS social_overview_cache (
+ client_hash TEXT NOT NULL,
+ provider TEXT NOT NULL,
+ subject TEXT NOT NULL,
+ payload TEXT NOT NULL,
+ updated_at INTEGER NOT NULL,
+ PRIMARY KEY(client_hash,provider)
+);
+CREATE TABLE IF NOT EXISTS social_metric_snapshots (
+ client_hash TEXT NOT NULL,
+ provider TEXT NOT NULL,
+ subject TEXT NOT NULL,
+ date TEXT NOT NULL,
+ metrics TEXT NOT NULL,
+ updated_at INTEGER NOT NULL,
+ PRIMARY KEY(client_hash,provider,subject,date)
+);
+CREATE INDEX IF NOT EXISTS idx_social_history ON social_metric_snapshots(client_hash,provider,subject,date);
