@@ -2,11 +2,12 @@
 (()=>{
 const $=q=>document.querySelector(q),$$=q=>[...document.querySelectorAll(q)];
 const KEY='viver-workspace-v1',COLORS={yellow:'#ffdf82',pink:'#f9b8c4',lavender:'#cdbdfa',mint:'#aae7c8',blue:'#acdaff',peach:'#facaa3'};
-const fresh=()=>({version:1,theme:'dark',language:'uk',plans:[],reminders:[],notes:[]});
+const fresh=()=>({version:1,theme:'dark',language:'uk',plans:[],reminders:[],notes:[],analytics:[]});
 const uid=()=>crypto.randomUUID?.()||'v-'+Date.now()+'-'+Math.random().toString(36).slice(2);
 const esc=s=>String(s??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const validDate=s=>typeof s==='string'&&s.length>0&&Number.isFinite(new Date(s).getTime());
 const clamp=(n,min,max)=>Math.min(max,Math.max(min,n));
+const metricValue=v=>v===null||v===undefined||v===''?null:Number.isFinite(Number(v))&&Number(v)>=0?Math.min(Number(v),1e15):null;
 const translations={
  uk:{workspace:'РОБОЧИЙ ПРОСТІР',home:'Огляд',planner:'Планер',reminders:'Нагадування',board:'Дошка ідей',platforms:'Платформи',settings:'Налаштування',local:'Дані на цьому пристрої',
  overviewTitle:'Огляд',scheduled:'Заплановано',content:'Контент',openTasks:'Активні нагадування',tasks:'Завдання',notes:'Стікери',ideas:'Ідеї',upcoming:'Найближче',viewAll:'Усі',contentPlan:'Контент-план',
@@ -29,9 +30,10 @@ let state=fresh();
 function normalise(d){
  const s=fresh();if(!d||typeof d!=='object'||Array.isArray(d))return s;
  s.theme=d.theme==='light'?'light':'dark';s.language=d.language==='en'?'en':'uk';
- if(Array.isArray(d.plans))s.plans=d.plans.slice(0,500).filter(p=>p&&typeof p.title==='string'&&validDate(p.date)).map(p=>({id:String(p.id||uid()).slice(0,90),title:p.title.slice(0,110),date:p.date,platform:['youtube','tiktok','twitch','x','other'].includes(p.platform)?p.platform:'other',status:['idea','draft','ready','published'].includes(p.status)?p.status:'idea',notes:String(p.notes||'').slice(0,350),created:Number(p.created)||Date.now()}));
- if(Array.isArray(d.reminders))s.reminders=d.reminders.slice(0,500).filter(r=>r&&typeof r.title==='string'&&validDate(r.due)).map(r=>({id:String(r.id||uid()).slice(0,90),title:r.title.slice(0,110),due:r.due,priority:['low','normal','high'].includes(r.priority)?r.priority:'normal',done:!!r.done,notified:!!r.notified,created:Number(r.created)||Date.now()}));
- if(Array.isArray(d.notes))s.notes=d.notes.slice(0,300).filter(n=>n&&typeof n.id==='string').map(n=>({id:n.id.slice(0,90),text:String(n.text||'').slice(0,3000),color:COLORS[n.color]?n.color:'yellow',x:clamp(Number(n.x)||0,0,1345),y:clamp(Number(n.y)||0,0,750),z:clamp(Number(n.z)||1,1,9999999)}));
+ if(Array.isArray(d.plans))s.plans=d.plans.slice(0,500).filter(p=>p&&typeof p.title==='string'&&validDate(p.date)).map(p=>({id:String(p.id||uid()).slice(0,90),title:p.title.slice(0,110),date:p.date,platform:['youtube','tiktok','twitch','x','other'].includes(p.platform)?p.platform:'other',status:['idea','draft','script','record','edit','ready','published'].includes(p.status)?p.status:'idea',notes:String(p.notes||'').slice(0,350),checks:Array.isArray(p.checks)?p.checks.slice(0,60).filter(c=>c&&typeof c.text==='string').map(c=>({id:String(c.id||uid()).slice(0,90),text:c.text.slice(0,120),done:!!c.done})):[],created:Number(p.created)||Date.now()}));
+ if(Array.isArray(d.reminders))s.reminders=d.reminders.slice(0,500).filter(r=>r&&typeof r.title==='string'&&validDate(r.due)).map(r=>({id:String(r.id||uid()).slice(0,90),title:r.title.slice(0,110),due:r.due,priority:['low','normal','high'].includes(r.priority)?r.priority:'normal',repeat:['none','daily','weekly','monthly','weekdays'].includes(r.repeat)?r.repeat:'none',weekdays:Array.isArray(r.weekdays)?r.weekdays.filter(n=>Number.isInteger(n)&&n>=0&&n<=6).slice(0,7):[],done:!!r.done,notified:!!r.notified,created:Number(r.created)||Date.now()}));
+ if(Array.isArray(d.notes))s.notes=d.notes.slice(0,300).filter(n=>n&&typeof n.id==='string').map(n=>({id:n.id.slice(0,90),text:String(n.text||'').slice(0,3000),color:COLORS[n.color]?n.color:'yellow',x:clamp(Number(n.x)||0,0,1345),y:clamp(Number(n.y)||0,0,750),z:clamp(Number(n.z)||1,1,9999999),group:String(n.group||'').slice(0,36),link:/^https:\/\//i.test(String(n.link||''))?String(n.link).slice(0,500):'',image:typeof n.image==='string'&&/^data:image\/(?:png|jpeg|webp);base64,/i.test(n.image)&&n.image.length<330000?n.image:'',links:Array.isArray(n.links)?n.links.filter(v=>typeof v==='string').slice(0,12):[]}));
+ if(Array.isArray(d.analytics))s.analytics=d.analytics.slice(0,1000).filter(r=>r&&['youtube','tiktok','twitch','x'].includes(r.platform)&&/^\d{4}-\d{2}-\d{2}$/.test(r.date)).map(r=>({platform:r.platform,date:r.date,views:metricValue(r.views),followers:metricValue(r.followers),likes:metricValue(r.likes),comments:metricValue(r.comments),shares:metricValue(r.shares)}));
  return s;
 }
 try{const stored=localStorage.getItem(KEY);if(stored)state=normalise(JSON.parse(stored))}catch(e){console.warn('VIVER storage unavailable',e)}
@@ -41,7 +43,7 @@ const icon=name=>'<svg><use href="#i-'+name+'"></use></svg>';
 let page='home',editingPlan='',editingReminder='',reminderFilter='open',noteColor='yellow',zoom=1,boardCentered=false,drag=null,toastTimer;
 const dateFmt=s=>new Date(s).toLocaleString(state.language==='uk'?'uk-UA':'en-US',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',year:'numeric'});
 const timeMs=s=>new Date(s).getTime();
-const stageLabel=s=>t(({idea:'idea',draft:'draft',ready:'ready',published:'published'})[s]||'idea');
+const stageLabel=s=>({script:state.language==='uk'?'Сценарій':'Script',record:state.language==='uk'?'Запис':'Recording',edit:state.language==='uk'?'Монтаж':'Editing'})[s]||t(({idea:'idea',draft:'draft',ready:'ready',published:'published'})[s]||'idea');
 const empty=k=>'<div class="empty-state">'+esc(t(k))+'</div>';
 function toast(msg){const el=$('#toast');el.textContent=msg;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),3200)}
 function lang(){
@@ -68,6 +70,7 @@ function nav(next,updateHash=true){
  $('#sidebar').classList.remove('open');$('#scrim').classList.remove('show');
  if(page==='board'&&!boardCentered){boardCentered=true;requestAnimationFrame(centerBoard)}
  if(page==='board')renderBoard();
+ window.VIVERExtras?.onNavigate?.(page);
  window.scrollTo({top:0,behavior:'instant'});
 }
 $$('[data-page]').forEach(el=>el.addEventListener('click',()=>nav(el.dataset.page)));
@@ -97,7 +100,7 @@ function clearPlan(){
  editingPlan='';$('#plan-form').reset();defaults();$('#plan-form-heading').textContent=t('newPost');$('#plan-save').textContent=t('addPost');$('#plan-cancel').hidden=true;
 }
 function clearReminder(){
- editingReminder='';$('#reminder-form').reset();defaults();$('#reminder-form-heading').textContent=t('newReminder');$('#reminder-save').textContent=t('addReminder');$('#reminder-cancel').hidden=true;
+ editingReminder='';$('#reminder-form').reset();defaults();$('#reminder-form-heading').textContent=t('newReminder');$('#reminder-save').textContent=t('addReminder');$('#reminder-cancel').hidden=true;$('#reminder-repeat').value='none';$('#reminder-weekdays').hidden=true;$('#reminder-weekdays input').forEach(x=>x.checked=false);
 }
 $('#plan-cancel').addEventListener('click',clearPlan);
 $('#reminder-cancel').addEventListener('click',clearReminder);
@@ -113,7 +116,7 @@ function renderPlans(){
  const filter=$('#plan-filter').value;
  const filtered=state.plans.filter(p=>filter==='all'||p.status===filter).sort((a,b)=>timeMs(a.date)-timeMs(b.date));
  $('#plan-count').textContent=state.plans.length+'';
- $('#plan-list').innerHTML=filtered.length?filtered.map(p=>'<div class="list-item"><div class="list-item-info"><strong>'+esc(p.title)+'</strong><small>'+esc(p.platform.toUpperCase())+' · '+esc(dateFmt(p.date))+(p.notes?' · '+esc(p.notes):'')+'</small></div><select class="stage-select" aria-label="'+esc(t('stage'))+'" data-plan-stage="'+esc(p.id)+'">'+['idea','draft','ready','published'].map(k=>'<option value="'+k+'"'+(k===p.status?' selected':'')+'>'+esc(stageLabel(k))+'</option>').join('')+'</select><div class="item-actions"><button type="button" data-plan-edit="'+esc(p.id)+'" title="'+esc(t('edit'))+'" aria-label="'+esc(t('edit'))+'">'+icon('edit')+'</button><button type="button" class="delete" data-plan-delete="'+esc(p.id)+'" title="'+esc(t('remove'))+'" aria-label="'+esc(t('remove'))+'">'+icon('trash')+'</button></div></div>').join(''):empty('noPlans');
+ $('#plan-list').innerHTML=filtered.length?filtered.map(p=>'<div class="list-item"><div class="list-item-info"><strong>'+esc(p.title)+'</strong><small>'+esc(p.platform.toUpperCase())+' · '+esc(dateFmt(p.date))+(p.notes?' · '+esc(p.notes):'')+'</small></div><select class="stage-select" aria-label="'+esc(t('stage'))+'" data-plan-stage="'+esc(p.id)+'">'+['idea','draft','script','record','edit','ready','published'].map(k=>'<option value="'+k+'"'+(k===p.status?' selected':'')+'>'+esc(stageLabel(k))+'</option>').join('')+'</select><div class="item-actions"><button type="button" data-plan-edit="'+esc(p.id)+'" title="'+esc(t('edit'))+'" aria-label="'+esc(t('edit'))+'">'+icon('edit')+'</button><button type="button" class="delete" data-plan-delete="'+esc(p.id)+'" title="'+esc(t('remove'))+'" aria-label="'+esc(t('remove'))+'">'+icon('trash')+'</button></div></div>').join(''):empty('noPlans');
 }
 $('#plan-filter').addEventListener('change',renderPlans);
 $('#plan-list').addEventListener('change',ev=>{
@@ -133,7 +136,7 @@ $('#plan-list').addEventListener('click',ev=>{
 $('#reminder-form').addEventListener('submit',ev=>{
  ev.preventDefault();const title=$('#reminder-title').value.trim(),due=$('#reminder-due').value;if(!title||!validDate(due))return;
  const existing=state.reminders.find(r=>r.id===editingReminder);
- const record={title:title.slice(0,110),due,priority:$('#reminder-priority').value};
+ const record={title:title.slice(0,110),due,priority:$('#reminder-priority').value,repeat:$('#reminder-repeat').value,weekdays:$('#reminder-weekdays input:checked').map(x=>Number(x.value))};
  if(existing){Object.assign(existing,record);existing.notified=false}else state.reminders.push({...record,id:uid(),done:false,notified:false,created:Date.now()});
  save();clearReminder();renderReminders();renderHome();toast(t(existing?'updated':'created'));
 });
@@ -145,9 +148,9 @@ function renderReminders(){
 $$('#reminder-tabs [data-filter]').forEach(b=>b.addEventListener('click',()=>{reminderFilter=b.dataset.filter;renderReminders()}));
 $('#reminder-list').addEventListener('click',ev=>{
  const toggle=ev.target.closest('[data-reminder-toggle]');
- if(toggle){const r=state.reminders.find(r=>r.id===toggle.dataset.reminderToggle);if(!r)return;r.done=!r.done;if(!r.done)r.notified=false;save();renderReminders();renderHome();return}
+ if(toggle){const r=state.reminders.find(r=>r.id===toggle.dataset.reminderToggle);if(!r)return;if(!r.done&&r.repeat&&r.repeat!=='none'){window.VIVERExtras?.advanceReminder?.(r)}else{r.done=!r.done;if(!r.done)r.notified=false}save();renderReminders();renderHome();return}
  const edit=ev.target.closest('[data-reminder-edit]');
- if(edit){const r=state.reminders.find(r=>r.id===edit.dataset.reminderEdit);if(!r)return;editingReminder=r.id;$('#reminder-title').value=r.title;$('#reminder-due').value=r.due;$('#reminder-priority').value=r.priority;$('#reminder-form-heading').textContent=t('editReminder');$('#reminder-save').textContent=t('saveChanges');$('#reminder-cancel').hidden=false;$('#reminder-title').focus();return}
+ if(edit){const r=state.reminders.find(r=>r.id===edit.dataset.reminderEdit);if(!r)return;editingReminder=r.id;$('#reminder-title').value=r.title;$('#reminder-due').value=r.due;$('#reminder-priority').value=r.priority;window.VIVERExtras?.setReminderRepeat?.(r);$('#reminder-form-heading').textContent=t('editReminder');$('#reminder-save').textContent=t('saveChanges');$('#reminder-cancel').hidden=false;$('#reminder-title').focus();return}
  const del=ev.target.closest('[data-reminder-delete]');
  if(del&&confirm(t('confirmDelete'))){state.reminders=state.reminders.filter(r=>r.id!==del.dataset.reminderDelete);if(editingReminder===del.dataset.reminderDelete)clearReminder();save();renderReminders();renderHome()}
 });
@@ -186,6 +189,7 @@ function renderBoard(){
  layer.innerHTML=state.notes.map(n=>'<article class="sticky" data-note="'+esc(n.id)+'" style="left:'+n.x+'px;top:'+n.y+'px;z-index:'+n.z+';--sticky:'+COLORS[n.color]+'"><div class="sticky-head" data-drag="'+esc(n.id)+'"><span class="sticky-grip">⠿</span><div class="sticky-actions"><button type="button" title="'+esc(t('duplicate'))+'" data-copy="'+esc(n.id)+'" aria-label="'+esc(t('duplicate'))+'">+</button><button type="button" title="'+esc(t('remove'))+'" data-remove="'+esc(n.id)+'" aria-label="'+esc(t('remove'))+'">×</button></div></div><textarea maxlength="3000" data-note-text="'+esc(n.id)+'" placeholder="'+esc(t('emptyNote'))+'">'+esc(n.text)+'</textarea><div class="sticky-bottom"><select data-note-color="'+esc(n.id)+'" aria-label="Колір">'+Object.keys(COLORS).map(c=>'<option value="'+c+'"'+(n.color===c?' selected':'')+'>'+c+'</option>').join('')+'</select></div></article>').join('');
  $('#board-empty').hidden=state.notes.length>0;
  $('#note-count').textContent=state.notes.length+'';
+ window.VIVERExtras?.onBoardRendered?.();
 }
 function addNote(position){
  const x=position?.x??(scroll.scrollLeft+scroll.clientWidth/2)/zoom-107;
@@ -226,9 +230,9 @@ layer.addEventListener('pointermove',ev=>{
  if(!drag||drag.pointer!==ev.pointerId)return;
  const n=state.notes.find(n=>n.id===drag.id);if(!n)return;
  n.x=Math.round(clamp(drag.fromX+(ev.clientX-drag.x)/zoom,0,1345));n.y=Math.round(clamp(drag.fromY+(ev.clientY-drag.y)/zoom,0,750));
- drag.el.style.left=n.x+'px';drag.el.style.top=n.y+'px';
+ drag.el.style.left=n.x+'px';drag.el.style.top=n.y+'px';window.VIVERExtras?.drawBoardLines?.();
 });
-function finishDrag(){if(drag){drag=null;save()}}
+function finishDrag(){if(drag){drag=null;save();window.VIVERExtras?.drawBoardLines?.()}}
 layer.addEventListener('pointerup',finishDrag);layer.addEventListener('pointercancel',finishDrag);window.addEventListener('pointerup',finishDrag);
 stage.addEventListener('dblclick',ev=>{
  if(ev.target.closest('.sticky,.board-empty'))return;
@@ -283,5 +287,6 @@ document.addEventListener('keydown',ev=>{
  if((ev.ctrlKey||ev.metaKey)&&ev.key.toLowerCase()==='k'){ev.preventDefault();if(searchDialog.open)searchDialog.close();else openSearch()}
  if(ev.key==='Escape'){$('#sidebar').classList.remove('open');$('#scrim').classList.remove('show')}
 });
+window.VIVERCore={get state(){return state},save,renderHome,renderPlans,renderReminders,renderBoard,nav,toast,esc,t,dateFmt,stageLabel,uid,normalise,validDate,get page(){return page},get noteColor(){return noteColor}};
 defaults();renderTheme();setZoom(1);lang();nav(['home','planner','reminders','board','platforms','settings'].includes(location.hash.slice(1))?location.hash.slice(1):'home',false);notifyDue();
 })();
