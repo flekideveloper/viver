@@ -7,9 +7,10 @@
 <meta name="description" content="VIVER — простір для ідей, планування контенту та нагадувань.">
 <title>VIVER</title>
 <link rel="icon" href="./favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="./style.css?v=5">
-<script defer src="./app.js?v=5"></script>
-<script defer src="./features.js?v=5"></script>
+<link rel="stylesheet" href="./style.css?v=6">
+<script defer src="./app.js?v=6"></script>
+<script defer src="./features.js?v=6"></script>
+<script defer src="./connections.js?v=1"></script>
 </head>
 <body>
 <svg class="sprites" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
@@ -131,6 +132,10 @@
   </section>
   <section class="page" id="page-platforms">
    <div class="page-title"><h1 data-t="platforms">Статистика</h1></div>
+   <div class="panel connections-panel"><div class="panel-title"><h2 data-t="accountConnections">Підключені акаунти</h2></div>
+    <div class="connection-grid" id="viver-accounts" aria-live="polite"></div>
+    <p class="connection-info" id="account-status-info"></p>
+   </div>
    <div class="panel analytics-panel"><div class="panel-title"><h2 data-t="statistics">Звіти</h2><div class="row-buttons"><button class="secondary-button" id="report-template" type="button" data-t="sampleCsv">Шаблон CSV</button><label class="secondary-button file-button" for="report-import"><svg><use href="#i-upload"/></svg><span data-t="importReport">Імпорт звіту</span><input id="report-import" type="file" accept=".csv,.json,text/csv,application/json" hidden></label></div></div>
     <div class="analytics-filters"><label><span data-t="platform">Платформа</span><select id="analytics-provider"><option value="youtube">YouTube</option><option value="tiktok">TikTok</option><option value="twitch">Twitch</option><option value="x">X</option></select></label><label><span data-t="metric">Показник</span><select id="analytics-metric"><option value="views" data-t="views">Перегляди</option><option value="followers" data-t="followers">Підписники</option><option value="likes" data-t="likes">Вподобання</option><option value="comments" data-t="comments">Коментарі</option><option value="shares" data-t="shares">Поширення</option></select></label></div>
     <div class="analytics-chart" id="analytics-chart"></div>
