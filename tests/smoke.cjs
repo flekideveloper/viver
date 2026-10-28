@@ -218,7 +218,7 @@ const vm=require('node:vm');
  assert.equal(overviewApiCalls,0,'dashboard never requests private metrics without a linked account');
  connectedYouTube=true;await window.VIVERConnections.refresh();
  await new Promise(r=>setTimeout(r,65));
- assert($('#creator-overview-content').textContent.includes('1 400')||$('#creator-overview-content').textContent.includes('1,400'),'true 7-day views shown in overview');
+ assert($('#creator-overview-content').textContent.replace(/[\s\u00a0\u202f,]/g,'').includes('1400'),'true 7-day views shown in overview');
  assert($('#creator-overview-content').textContent.includes('+100%'),'weekly view growth shown');
  assert($('#creator-overview-content').textContent.includes('+50%'),'new subscriber growth shown');
  assert($('#creator-overview-content').textContent.includes('editing tutorial'),'search discovery term shown');
