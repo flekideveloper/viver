@@ -10,6 +10,7 @@ on:
       - 'connections.js'
       - 'youtube.js'
       - 'overview-analytics.js'
+      - 'creator-studio.js'
       - 'auth-worker/**'
       - 'index.html'
       - 'tests/**'
@@ -36,6 +37,7 @@ jobs:
           node --check connections.js
           node --check youtube.js
           node --check overview-analytics.js
+          node --check creator-studio.js
           node --check auth-worker/src/index.js
           node --check tests/oauth.cjs
           node --check tests/smoke.cjs
