@@ -9,7 +9,7 @@ const validDate=s=>typeof s==='string'&&s.length>0&&Number.isFinite(new Date(s).
 const clamp=(n,min,max)=>Math.min(max,Math.max(min,n));
 const metricValue=v=>v===null||v===undefined||v===''?null:Number.isFinite(Number(v))&&Number(v)>=0?Math.min(Number(v),1e15):null;
 const translations={
- uk:{workspace:'РОБОЧИЙ ПРОСТІР',home:'Огляд',planner:'Планер',calendar:'Календар',gray:'Сіра',cosmic:'Космічна',reminders:'Нагадування',board:'Дошка ідей',platforms:'Платформи',settings:'Налаштування',local:'Дані на цьому пристрої',
+ uk:{workspace:'РОБОЧИЙ ПРОСТІР',home:'Огляд',planner:'Планер',calendar:'Календар',noteDetails:'Деталі стікера',noteGroup:'Група',noteLink:'Посилання (HTTPS)',script:'Сценарій',record:'Запис',editing:'Монтаж',gray:'Сіра',cosmic:'Космічна',reminders:'Нагадування',board:'Дошка ідей',platforms:'Статистика',settings:'Налаштування',local:'Дані на цьому пристрої',
  overviewTitle:'Огляд',scheduled:'Заплановано',content:'Контент',openTasks:'Активні нагадування',tasks:'Завдання',notes:'Стікери',ideas:'Ідеї',upcoming:'Найближче',viewAll:'Усі',contentPlan:'Контент-план',
  newPost:'Новий запис',title:'Назва',platform:'Платформа',stage:'Стан',date:'Дата й час',details:'Нотатка',optional:'Необов’язково',other:'Інше',idea:'Ідея',draft:'У процесі',ready:'Готово',published:'Опубліковано',addPost:'Додати запис',myContent:'Мій контент',all:'Усі',cancel:'Скасувати',saveChanges:'Зберегти зміни',editPost:'Редагувати запис',contentPlaceholder:'Назва відео або стриму',
  alerts:'Сповіщення',newReminder:'Нове нагадування',taskPlaceholder:'Що потрібно зробити?',priority:'Пріоритет',normal:'Звичайний',high:'Високий',low:'Низький',addReminder:'Додати',myReminders:'Мої нагадування',open:'Активні',done:'Готові',editReminder:'Редагувати нагадування',
@@ -17,7 +17,7 @@ const translations={
  appearance:'Вигляд',dark:'Темна',light:'Світла',language:'Мова',backup:'Резервна копія',export:'Експорт',import:'Імпорт',reset:'Видалити локальні дані',delete:'Видалити',storageNotice:'Нагадування, планер і стікери зберігаються лише в цьому браузері.',searchPlaceholder:'Знайти в моїх записах…',close:'Закрити',
  noReminders:'Нагадувань ще немає',noPlans:'Записів ще немає',noResults:'Нічого не знайдено',noNotes:'Нотатка',emptyNote:'Нова ідея…',edit:'Редагувати',duplicate:'Дублювати',remove:'Видалити',overdue:'Прострочено',
  created:'Збережено',updated:'Оновлено',removed:'Видалено',confirmDelete:'Видалити запис?',confirmAll:'Видалити всі локальні дані VIVER? Цю дію не можна скасувати.',confirmAgain:'Підтверди остаточне видалення всіх нотаток і планів.',confirmImport:'Замінити поточні записи даними з файлу?',badBackup:'Невірний файл резервної копії',tooLarge:'Максимальний розмір файлу — 2 МБ',backupDone:'Копію збережено',importDone:'Копію відновлено',storageFail:'Не вдалося зберегти дані. Зроби резервну копію.',notificationOn:'Сповіщення увімкнено, поки VIVER відкритий',notificationOff:'Браузер не дозволяє сповіщення',notificationUnsupported:'У цьому браузері сповіщення недоступні',notifyPrefix:'Нагадування: ',noteCount:'сті́керів'},
- en:{workspace:'WORKSPACE',home:'Overview',planner:'Planner',calendar:'Calendar',gray:'Gray',cosmic:'Cosmic',reminders:'Reminders',board:'Idea board',platforms:'Platforms',settings:'Settings',local:'Stored on this device',
+ en:{workspace:'WORKSPACE',home:'Overview',planner:'Planner',calendar:'Calendar',noteDetails:'Sticky details',noteGroup:'Group',noteLink:'Link (HTTPS)',script:'Script',record:'Recording',editing:'Editing',gray:'Gray',cosmic:'Cosmic',reminders:'Reminders',board:'Idea board',platforms:'Analytics',settings:'Settings',local:'Stored on this device',
  overviewTitle:'Overview',scheduled:'Scheduled',content:'Content',openTasks:'Open reminders',tasks:'Tasks',notes:'Sticky notes',ideas:'Ideas',upcoming:'Up next',viewAll:'View all',contentPlan:'Content plan',
  newPost:'New content',title:'Title',platform:'Platform',stage:'Status',date:'Date & time',details:'Note',optional:'Optional',other:'Other',idea:'Idea',draft:'In progress',ready:'Ready',published:'Published',addPost:'Add content',myContent:'My content',all:'All',cancel:'Cancel',saveChanges:'Save changes',editPost:'Edit content',contentPlaceholder:'Video or stream title',
  alerts:'Notifications',newReminder:'New reminder',taskPlaceholder:'What needs doing?',priority:'Priority',normal:'Normal',high:'High',low:'Low',addReminder:'Add',myReminders:'My reminders',open:'Open',done:'Done',editReminder:'Edit reminder',
@@ -81,22 +81,41 @@ function renderHome(){
  $('#stat-notes').textContent=state.notes.length;
  const rem=state.reminders.filter(r=>!r.done).sort((a,b)=>timeMs(a.due)-timeMs(b.due)).slice(0,5);
  const plans=state.plans.filter(p=>p.status!=='published').sort((a,b)=>timeMs(a.date)-timeMs(b.date)).slice(0,5);
- $('#home-reminders').innerHTML=rem.length?rem.map(r=>'<div class="compact-item"><span><strong>'+esc(r.title)+'</strong><small>'+esc(dateFmt(r.due))+'</small></span>'+(timeMs(r.due)<Date.now()?'<b class="overdue">!</b>':'')+'</div>').join(''):empty('noReminders');
- $('#home-plans').innerHTML=plans.length?plans.map(p=>'<div class="compact-item"><span><strong>'+esc(p.title)+'</strong><small>'+esc(p.platform.toUpperCase())+' · '+esc(stageLabel(p.status))+'</small></span><span class="compact-date">'+esc(dateFmt(p.date))+'</span></div>').join(''):empty('noPlans');
+ $('#home-reminders').innerHTML=rem.length?rem.map(r=>'<button type="button" class="compact-item compact-action" data-home-reminder="'+esc(r.id)+'"><span><strong>'+esc(r.title)+'</strong><small>'+esc(dateFmt(r.due))+'</small></span>'+(timeMs(r.due)<Date.now()?'<b class="overdue">!</b>':'')+'</button>').join(''):empty('noReminders');
+ $('#home-plans').innerHTML=plans.length?plans.map(p=>'<button type="button" class="compact-item compact-action" data-home-plan="'+esc(p.id)+'"><span><strong>'+esc(p.title)+'</strong><small>'+esc(p.platform.toUpperCase())+' · '+esc(stageLabel(p.status))+'</small></span><span class="compact-date">'+esc(dateFmt(p.date))+'</span></button>').join(''):empty('noPlans');
  const open=state.reminders.filter(r=>!r.done).length;
  $('#nav-reminder-count').textContent=open;$('#nav-reminder-count').hidden=!open;
+}
+for(const [root,key,selector,target] of [['#home-plans','homePlan','[data-plan-edit]','planner'],['#home-reminders','homeReminder','[data-reminder-edit]','reminders']]){
+ $(root).addEventListener('click',ev=>{
+  const btn=ev.target.closest('[data-'+(key==='homePlan'?'home-plan':'home-reminder')+']');if(!btn)return;
+  const id=btn.dataset[key];nav(target);
+  const action=$$(selector).find(x=>x.dataset[key==='homePlan'?'planEdit':'reminderEdit']===id);action?.click();
+ });
 }
 function defaults(){
  const d=new Date(Date.now()+86400000);d.setHours(18,0,0,0);const toInput=x=>new Date(x.getTime()-x.getTimezoneOffset()*60000).toISOString().slice(0,16);
  if(!$('#plan-date').value)$('#plan-date').value=toInput(d);
  if(!$('#reminder-due').value)$('#reminder-due').value=toInput(d);
 }
+function openPlanEditor(){
+ $('#planner-layout').classList.add('editing');
+ $('#plan-editor').hidden=false;
+}
+function openReminderEditor(){
+ $('#reminder-layout').classList.add('editing');
+ $('#reminder-editor').hidden=false;
+}
 function clearPlan(){
  editingPlan='';$('#plan-form').reset();defaults();$('#plan-form-heading').textContent=t('newPost');$('#plan-save').textContent=t('addPost');$('#plan-cancel').hidden=true;
+ $('#planner-layout').classList.remove('editing');$('#plan-editor').hidden=true;
 }
 function clearReminder(){
  editingReminder='';$('#reminder-form').reset();defaults();$('#reminder-form-heading').textContent=t('newReminder');$('#reminder-save').textContent=t('addReminder');$('#reminder-cancel').hidden=true;$('#reminder-repeat').value='none';$('#reminder-weekdays').hidden=true;$$('#reminder-weekdays input').forEach(x=>x.checked=false);
+ $('#reminder-layout').classList.remove('editing');$('#reminder-editor').hidden=true;
 }
+$('#plan-new-top').addEventListener('click',()=>{clearPlan();openPlanEditor();$('#plan-title').focus()});
+$('#reminder-new-top').addEventListener('click',()=>{clearReminder();openReminderEditor();$('#reminder-title').focus()});
 $('#plan-cancel').addEventListener('click',clearPlan);
 $('#reminder-cancel').addEventListener('click',clearReminder);
 $('#plan-form').addEventListener('submit',ev=>{
@@ -123,7 +142,7 @@ $('#plan-list').addEventListener('click',ev=>{
  const edit=ev.target.closest('[data-plan-edit]');
  if(edit){
   const p=state.plans.find(p=>p.id===edit.dataset.planEdit);if(!p)return;
-  editingPlan=p.id;$('#plan-title').value=p.title;$('#plan-date').value=p.date;$('#plan-status').value=p.status;$('#plan-platform').value=p.platform;$('#plan-notes').value=p.notes;
+  editingPlan=p.id;openPlanEditor();$('#plan-title').value=p.title;$('#plan-date').value=p.date;$('#plan-status').value=p.status;$('#plan-platform').value=p.platform;$('#plan-notes').value=p.notes;
   $('#plan-form-heading').textContent=t('editPost');$('#plan-save').textContent=t('saveChanges');$('#plan-cancel').hidden=false;$('#plan-title').focus();return;
  }
  const del=ev.target.closest('[data-plan-delete]');
@@ -132,7 +151,10 @@ $('#plan-list').addEventListener('click',ev=>{
 $('#reminder-form').addEventListener('submit',ev=>{
  ev.preventDefault();const title=$('#reminder-title').value.trim(),due=$('#reminder-due').value;if(!title||!validDate(due))return;
  const existing=state.reminders.find(r=>r.id===editingReminder);
- const record={title:title.slice(0,110),due,priority:$('#reminder-priority').value,repeat:$('#reminder-repeat').value,weekdays:$$('#reminder-weekdays input:checked').map(x=>Number(x.value)),anchorDay:new Date(due).getDate()};
+ const repeat=$('#reminder-repeat').value;
+ const days=$$('#reminder-weekdays input:checked').map(x=>Number(x.value));
+ if(repeat==='weekdays'&&!days.length){toast(state.language==='uk'?'Вибери хоча б один день тижня.':'Choose at least one weekday.');return}
+ const record={title:title.slice(0,110),due,priority:$('#reminder-priority').value,repeat,weekdays:repeat==='weekdays'?days:[],anchorDay:new Date(due).getDate()};
  if(existing){Object.assign(existing,record);existing.notified=false}else state.reminders.push({...record,id:uid(),done:false,notified:false,created:Date.now()});
  save();clearReminder();renderReminders();renderHome();toast(t(existing?'updated':'created'));
 });
@@ -147,7 +169,7 @@ $('#reminder-list').addEventListener('click',ev=>{
  const toggle=ev.target.closest('[data-reminder-toggle]');
  if(toggle){const r=state.reminders.find(r=>r.id===toggle.dataset.reminderToggle);if(!r)return;if(!r.done&&r.repeat&&r.repeat!=='none'){window.VIVERExtras?.advanceReminder?.(r)}else{r.done=!r.done;if(!r.done)r.notified=false}save();renderReminders();renderHome();return}
  const edit=ev.target.closest('[data-reminder-edit]');
- if(edit){const r=state.reminders.find(r=>r.id===edit.dataset.reminderEdit);if(!r)return;editingReminder=r.id;$('#reminder-title').value=r.title;$('#reminder-due').value=r.due;$('#reminder-priority').value=r.priority;window.VIVERExtras?.setReminderRepeat?.(r);$('#reminder-form-heading').textContent=t('editReminder');$('#reminder-save').textContent=t('saveChanges');$('#reminder-cancel').hidden=false;$('#reminder-title').focus();return}
+ if(edit){const r=state.reminders.find(r=>r.id===edit.dataset.reminderEdit);if(!r)return;editingReminder=r.id;openReminderEditor();$('#reminder-title').value=r.title;$('#reminder-due').value=r.due;$('#reminder-priority').value=r.priority;window.VIVERExtras?.setReminderRepeat?.(r);$('#reminder-form-heading').textContent=t('editReminder');$('#reminder-save').textContent=t('saveChanges');$('#reminder-cancel').hidden=false;$('#reminder-title').focus();return}
  const del=ev.target.closest('[data-reminder-delete]');
  if(del&&confirm(t('confirmDelete'))){state.reminders=state.reminders.filter(r=>r.id!==del.dataset.reminderDelete);if(editingReminder===del.dataset.reminderDelete)clearReminder();save();renderReminders();renderHome()}
 });
@@ -271,11 +293,11 @@ function renderSearch(){
  const q=searchInput.value.trim().toLowerCase();
  if(!q){$('#search-results').innerHTML='';return}
  const arr=[
- ...state.plans.filter(p=>p.title.toLowerCase().includes(q)||p.notes.toLowerCase().includes(q)).slice(0,10).map(p=>({title:p.title,kind:t('planner'),target:'planner'})),
- ...state.reminders.filter(r=>r.title.toLowerCase().includes(q)).slice(0,10).map(r=>({title:r.title,kind:t('reminders'),target:'reminders'})),
+ ...state.plans.filter(p=>p.title.toLowerCase().includes(q)||p.notes.toLowerCase().includes(q)||(p.checks||[]).some(ch=>ch.text.toLowerCase().includes(q))).slice(0,10).map(p=>({id:p.id,title:p.title,kind:t('planner'),target:'planner'})),
+ ...state.reminders.filter(r=>r.title.toLowerCase().includes(q)).slice(0,10).map(r=>({id:r.id,title:r.title,kind:t('reminders'),target:'reminders'})),
  ...state.notes.filter(n=>n.text.toLowerCase().includes(q)).slice(0,10).map(n=>({title:n.text||t('emptyNote'),kind:t('board'),target:'board',note:n.id}))
  ].slice(0,25);
- $('#search-results').innerHTML=arr.length?arr.map(a=>'<button class="search-result" type="button" data-search-target="'+a.target+'" data-search-note="'+esc(a.note||'')+'"><span>'+esc(a.title.slice(0,130))+'</span><small>'+esc(a.kind)+'</small></button>').join(''):empty('noResults');
+ $('#search-results').innerHTML=arr.length?arr.map(a=>'<button class="search-result" type="button" data-search-target="'+a.target+'" data-search-note="'+esc(a.note||'')+'" data-search-id="'+esc(a.id||'')+'"><span>'+esc(a.title.slice(0,130))+'</span><small>'+esc(a.kind)+'</small></button>').join(''):empty('noResults');
 }
 $('#search-open').addEventListener('click',openSearch);
 $('#search-close').addEventListener('click',()=>searchDialog.close());
@@ -283,7 +305,15 @@ searchInput.addEventListener('input',renderSearch);
 $('#search-results').addEventListener('click',ev=>{
  const item=ev.target.closest('[data-search-target]');if(!item)return;
  searchDialog.close();nav(item.dataset.searchTarget);
- if(item.dataset.searchNote){const el=layer.querySelector('[data-note="'+CSS.escape(item.dataset.searchNote)+'"]');if(el){scroll.scrollLeft=Number.parseFloat(el.style.left)*zoom-120;scroll.scrollTop=Number.parseFloat(el.style.top)*zoom-120;el.querySelector('textarea')?.focus()}}
+ if(item.dataset.searchId){
+  const sel=item.dataset.searchTarget==='planner'?'[data-plan-edit]':'[data-reminder-edit]';
+  const name=item.dataset.searchTarget==='planner'?'planEdit':'reminderEdit';
+  $$(sel).find(b=>b.dataset[name]===item.dataset.searchId)?.click();
+ }
+ if(item.dataset.searchNote){
+  const el=$$('#notes-layer .sticky').find(el=>el.dataset.note===item.dataset.searchNote);
+  if(el){scroll.scrollLeft=Number.parseFloat(el.style.left)*zoom-120;scroll.scrollTop=Number.parseFloat(el.style.top)*zoom-120;el.querySelector('textarea')?.focus()}
+ }
 });
 document.addEventListener('keydown',ev=>{
  if((ev.ctrlKey||ev.metaKey)&&ev.key.toLowerCase()==='k'){ev.preventDefault();if(searchDialog.open)searchDialog.close();else openSearch()}
