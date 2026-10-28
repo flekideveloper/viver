@@ -22,7 +22,8 @@ const auth={
  getConnections:()=>connected?[{provider:'youtube',connected:true,label:'Creator Test'}]:[],
  getStatus:()=>connected?'ready':'ready',
  request:async url=>{
-  if(url==='/youtube/videos'){videoCalls++;return data}
+  if(url==='/youtube/videos'){videoCalls++;return {...data,videos:data.videos.slice(0,1),nextPageToken:'NEXT_PAGE'}}
+  if(url==='/youtube/videos?cursor=NEXT_PAGE'){videoCalls++;return {channelId:data.channelId,videos:data.videos.slice(1),nextPageToken:null}}
   if(url==='/youtube/stats'){channelCalls++;return totals}
   if(url.endsWith('/retention')){retentionCalls++;return {id:data.videos[0].id,points:[{position:0,ratio:0.9},{position:0.5,ratio:0.6},{position:1,ratio:0.3}]}}
   if(url.includes('/compare?')){comparisonCalls++;return compare}
@@ -58,6 +59,9 @@ const flush=()=>new Promise(resolve=>setTimeout(resolve,25));
  click('[data-studio-retention="AbCdEfGhIjK"]');await flush();
  assert.equal(retentionCalls,1,'retention called for user-selected video only');
  assert($('#studio-body svg[aria-label="Audience retention"]'),'retention chart rendered from real points');
+ click('[data-studio-more]');await flush();
+ assert.equal(videoCalls,2,'second page of older videos loaded only on demand');
+ assert($('#studio-body').textContent.includes('Second video'),'older video visible after pagination');
  click('[data-studio-tab="planner"]');
  assert($('#studio-body').textContent.includes('Пов’язано'),'planner linkage visible');
  click('[data-studio-tab="goals"]');
@@ -79,7 +83,7 @@ const flush=()=>new Promise(resolve=>setTimeout(resolve,25));
  connected=false;window.dispatchEvent(new window.Event('viver-connections-updated'));
  assert($('#studio-panel').hidden,'disconnect immediately hides private video analytics');
  assert($('#creator-home-tools').hidden,'disconnect hides goal/alert strip');
- assert.equal(videoCalls,1,'no extra data fetch after disconnect');
+ assert.equal(videoCalls,2,'no extra data fetch after disconnect');
  window.close();
  console.log('VIVER Creator Studio tests: PASS — owner video list, retention, planner sync, goals, notices, 7-day comparisons, disconnect');
 })().catch(e=>{console.error(e);process.exit(1)});
