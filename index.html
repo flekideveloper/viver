@@ -7,8 +7,8 @@
 <meta name="description" content="VIVER — простір для ідей, планування контенту та нагадувань.">
 <title>VIVER</title>
 <link rel="icon" href="./favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="./style.css?v=2">
-<script defer src="./app.js?v=2"></script>
+<link rel="stylesheet" href="./style.css?v=3">
+<script defer src="./app.js?v=3"></script>
 </head>
 <body>
 <svg class="sprites" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
@@ -61,20 +61,21 @@
    </div>
   </section>
   <section class="page" id="page-planner">
-   <div class="page-title"><h1 data-t="planner">Планер</h1><span id="plan-count" class="count"></span></div>
+   <div class="page-title"><h1 data-t="planner">Планер</h1><div class="planner-header"><span id="plan-count" class="count"></span><div class="segmented" id="plan-modes"><button type="button" data-plan-mode="list" class="active" data-t="listMode">Список</button><button type="button" data-plan-mode="calendar" data-t="calendarMode">Календар</button><button type="button" data-plan-mode="board" data-t="kanbanMode">Етапи</button></div></div></div>
    <div class="workspace-grid">
     <div class="panel form-panel"><h2 id="plan-form-heading" data-t="newPost">Новий запис</h2>
      <form id="plan-form">
       <label><span data-t="title">Назва</span><input id="plan-title" maxlength="110" required placeholder="Назва відео або стриму" data-ph="contentPlaceholder"></label>
       <div class="two-fields"><label><span data-t="platform">Платформа</span><select id="plan-platform"><option value="youtube">YouTube</option><option value="tiktok">TikTok</option><option value="twitch">Twitch</option><option value="x">X</option><option value="other" data-t="other">Інше</option></select></label>
-      <label><span data-t="stage">Стан</span><select id="plan-status"><option value="idea" data-t="idea">Ідея</option><option value="draft" data-t="draft">У процесі</option><option value="ready" data-t="ready">Готово</option><option value="published" data-t="published">Опубліковано</option></select></label></div>
+      <label><span data-t="stage">Стан</span><select id="plan-status"><option value="idea" data-t="idea">Ідея</option><option value="draft" data-t="draft">У процесі</option><option value="script" data-t="script">Сценарій</option><option value="record" data-t="record">Запис</option><option value="edit" data-t="editing">Монтаж</option><option value="ready" data-t="ready">Готово</option><option value="published" data-t="published">Опубліковано</option></select></label></div>
       <label><span data-t="date">Дата й час</span><input id="plan-date" type="datetime-local" required></label>
       <label><span data-t="details">Нотатка</span><textarea id="plan-notes" maxlength="350" rows="3" placeholder="Необов’язково" data-ph="optional"></textarea></label>
       <div class="form-actions"><button class="primary-button" id="plan-save" type="submit" data-t="addPost">Додати запис</button><button class="quiet-button" id="plan-cancel" type="button" hidden data-t="cancel">Скасувати</button></div>
      </form>
     </div>
-    <div class="panel list-panel"><div class="panel-title"><h2 data-t="myContent">Мій контент</h2><select class="mini-select" id="plan-filter" aria-label="Фільтр"><option value="all" data-t="all">Усі</option><option value="idea" data-t="idea">Ідея</option><option value="draft" data-t="draft">У процесі</option><option value="ready" data-t="ready">Готово</option><option value="published" data-t="published">Опубліковано</option></select></div><div id="plan-list" class="item-list"></div></div>
+    <div class="panel list-panel"><div class="panel-title"><h2 data-t="myContent">Мій контент</h2><select class="mini-select" id="plan-filter" aria-label="Фільтр"><option value="all" data-t="all">Усі</option><option value="idea" data-t="idea">Ідея</option><option value="draft" data-t="draft">У процесі</option><option value="script" data-t="script">Сценарій</option><option value="record" data-t="record">Запис</option><option value="edit" data-t="editing">Монтаж</option><option value="ready" data-t="ready">Готово</option><option value="published" data-t="published">Опубліковано</option></select></div><div id="plan-list" class="item-list"></div></div>
    </div>
+   <div class="panel planner-visual" id="planner-visual" hidden><div class="planner-visual-top"><div class="calendar-nav" id="calendar-nav"><button type="button" class="icon-button" id="calendar-prev" aria-label="Попередній">‹</button><strong id="calendar-month"></strong><button type="button" class="icon-button" id="calendar-next" aria-label="Наступний">›</button><button type="button" class="secondary-button" id="calendar-today" data-t="today">Сьогодні</button></div><button class="secondary-button" type="button" id="planner-new">+ <span data-t="newPost">Новий запис</span></button></div><div id="planner-visual-content"></div></div>
   </section>
   <section class="page" id="page-reminders">
    <div class="page-title"><h1 data-t="reminders">Нагадування</h1><button type="button" class="secondary-button" id="enable-alerts"><svg><use href="#i-bell"/></svg><span data-t="alerts">Сповіщення</span></button></div>
@@ -83,6 +84,8 @@
      <form id="reminder-form">
       <label><span data-t="title">Назва</span><input id="reminder-title" maxlength="110" required placeholder="Що потрібно зробити?" data-ph="taskPlaceholder"></label>
       <label><span data-t="date">Дата й час</span><input id="reminder-due" type="datetime-local" required></label>
+      <label><span data-t="repeatLabel">Повторення</span><select id="reminder-repeat"><option value="none" data-t="noRepeat">Без повторення</option><option value="daily" data-t="daily">Щодня</option><option value="weekly" data-t="weekly">Щотижня</option><option value="monthly" data-t="monthly">Щомісяця</option><option value="weekdays" data-t="selectedDays">Вибрані дні</option></select></label>
+      <fieldset id="reminder-weekdays" class="weekday-picker" hidden><legend data-t="chooseDays">Дні тижня</legend><label><input type="checkbox" value="1">Пн</label><label><input type="checkbox" value="2">Вт</label><label><input type="checkbox" value="3">Ср</label><label><input type="checkbox" value="4">Чт</label><label><input type="checkbox" value="5">Пт</label><label><input type="checkbox" value="6">Сб</label><label><input type="checkbox" value="0">Нд</label></fieldset>
       <label><span data-t="priority">Пріоритет</span><select id="reminder-priority"><option value="normal" data-t="normal">Звичайний</option><option value="high" data-t="high">Високий</option><option value="low" data-t="low">Низький</option></select></label>
       <div class="form-actions"><button class="primary-button" id="reminder-save" type="submit" data-t="addReminder">Додати</button><button class="quiet-button" id="reminder-cancel" type="button" hidden data-t="cancel">Скасувати</button></div>
      </form>
@@ -101,13 +104,14 @@
       <button type="button" class="swatch" data-color="mint" style="--color:#aae7c8" title="М’ятний" aria-label="М’ятний"></button>
       <button type="button" class="swatch" data-color="blue" style="--color:#acdaff" title="Синій" aria-label="Синій"></button>
       <button type="button" class="swatch" data-color="peach" style="--color:#facaa3" title="Персиковий" aria-label="Персиковий"></button>
-     </div></div>
+     </div><select id="board-group-filter" class="mini-select" aria-label="Групи"><option value="all" data-t="allGroups">Усі групи</option></select></div>
      <div class="zoom-controls"><button type="button" id="zoom-out" aria-label="Зменшити">−</button><span id="zoom-label">100%</span><button type="button" id="zoom-in" aria-label="Збільшити">+</button></div>
     </div>
     <div class="board-scroll" id="board-scroll">
-     <div class="board-sizer" id="board-sizer"><div class="board-surface" id="board-surface"><div class="notes-layer" id="notes-layer"></div><div class="board-empty" id="board-empty"><span class="empty-sticky">+</span><strong data-t="emptyBoard">Тут починаються ідеї</strong><button class="quiet-button" id="empty-add" type="button" data-t="addFirst">Додати стікер</button></div></div></div>
+     <div class="board-sizer" id="board-sizer"><div class="board-surface" id="board-surface"><svg class="board-connections" id="board-connections" width="1560" height="960" viewBox="0 0 1560 960" aria-hidden="true"></svg><div class="notes-layer" id="notes-layer"></div><div class="board-empty" id="board-empty"><span class="empty-sticky">+</span><strong data-t="emptyBoard">Тут починаються ідеї</strong><button class="quiet-button" id="empty-add" type="button" data-t="addFirst">Додати стікер</button></div></div></div>
     </div>
    </div>
+   <input type="file" accept="image/*" id="note-image-input" hidden>
   </section>
   <section class="page" id="page-platforms">
    <div class="page-title"><h1 data-t="platforms">Платформи</h1></div>
@@ -117,7 +121,12 @@
     <div class="platform-row"><span class="platform-icon twitch">◪</span><span><strong>Twitch</strong><small data-t="pending">Не підключено</small></span><span class="tag" data-t="unavailable">Недоступно</span></div>
     <div class="platform-row"><span class="platform-icon x">𝕏</span><span><strong>X / Twitter</strong><small data-t="pending">Не підключено</small></span><span class="tag" data-t="unavailable">Недоступно</span></div>
    </div>
-   <p class="platform-footnote" data-t="apiNotice">Аналітика з’явиться після підключення офіційних API. Зараз доступу до акаунтів немає.</p>
+   <p class="platform-footnote" data-t="apiNotice">Автоматичне підключення ще не налаштоване. Можеш завантажити власний звіт CSV або JSON для перегляду статистики.</p>
+   <div class="panel analytics-panel"><div class="panel-title"><h2 data-t="statistics">Статистика зі звітів</h2><div class="row-buttons"><button class="secondary-button" id="report-template" type="button" data-t="sampleCsv">Шаблон CSV</button><label class="secondary-button file-button" for="report-import"><svg><use href="#i-upload"/></svg><span data-t="importReport">Імпорт звіту</span><input id="report-import" type="file" accept=".csv,.json,text/csv,application/json" hidden></label></div></div>
+    <div class="analytics-filters"><label><span data-t="platform">Платформа</span><select id="analytics-provider"><option value="youtube">YouTube</option><option value="tiktok">TikTok</option><option value="twitch">Twitch</option><option value="x">X</option></select></label><label><span data-t="metric">Показник</span><select id="analytics-metric"><option value="views" data-t="views">Перегляди</option><option value="followers" data-t="followers">Підписники</option><option value="likes" data-t="likes">Вподобання</option><option value="comments" data-t="comments">Коментарі</option><option value="shares" data-t="shares">Поширення</option></select></label></div>
+    <div class="analytics-chart" id="analytics-chart"></div>
+    <div class="analytics-bottom"><small data-t="reportNote">Лише дані завантаженого файлу, без підключення до акаунтів.</small><button id="analytics-clear" type="button" class="text-button" data-t="clearReports">Видалити звіти</button></div>
+   </div>
   </section>
   <section class="page" id="page-settings">
    <div class="page-title"><h1 data-t="settings">Налаштування</h1></div>
