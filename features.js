@@ -281,7 +281,9 @@ function cleanReport(r){
  const plat=String(r.platform||r.service||'').trim().toLowerCase().replace('twitter','x');
  const platform={youtube:'youtube',yt:'youtube',tiktok:'tiktok',twitch:'twitch',x:'x'}[plat];if(!platform)return null;
  const date=String(r.date||r.day||'').trim();
- if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||new Date(date+'T12:00:00Z').toISOString().slice(0,10)!==date)return null;
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return null;
+ const checkDate=new Date(date+'T12:00:00Z');
+ if(!Number.isFinite(checkDate.getTime())||checkDate.toISOString().slice(0,10)!==date)return null;
  const metrics={};let hasAny=false;
  for(const key of ['views','followers','likes','comments','shares']){
   const raw=r[key]??'';
