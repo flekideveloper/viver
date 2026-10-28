@@ -431,6 +431,6 @@ function translate(){
  renderVisual();renderCalendar();renderAnalytics();onBoardRenderedFilter();
 }
 function onNavigate(page){if(page==='planner')renderVisual();if(page==='calendar')renderCalendar();if(page==='platforms')renderAnalytics();if(page==='board')drawBoardLines()}
-window.VIVERExtras={onNavigate,onPlansRendered,onRemindersRendered,onBoardRendered,drawBoardLines,setReminderRepeat,advanceReminder,translate,renderAnalytics};
+window.VIVERExtras={onNavigate,onPlansRendered,onRemindersRendered,onBoardRendered,drawBoardLines,setReminderRepeat,advanceReminder,translate,renderAnalytics,getActiveGroup:()=>selectedGroup==='all'?'':selectedGroup};
 translate();onPlansRendered();onRemindersRendered();onBoardRendered();renderAnalytics();
 })();
