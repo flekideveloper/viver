@@ -8,11 +8,12 @@
 <meta name="description" content="VIVER — простір для ідей, планування контенту та нагадувань.">
 <title>VIVER</title>
 <link rel="icon" href="./favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="./style.css?v=7">
+<link rel="stylesheet" href="./style.css?v=8">
 <script defer src="./app.js?v=7"></script>
 <script defer src="./features.js?v=7"></script>
-<script defer src="./connections.js?v=2"></script>
+<script defer src="./connections.js?v=3"></script>
 <script defer src="./youtube.js?v=2"></script>
+<script defer src="./overview-analytics.js?v=1"></script>
 </head>
 <body>
 <svg class="sprites" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
@@ -61,6 +62,13 @@
     <button class="stat" data-goto="reminders" type="button"><span data-t="openTasks">Активні нагадування</span><strong id="stat-reminders">0</strong><small data-t="tasks">Завдання</small></button>
     <button class="stat" data-goto="board" type="button"><span data-t="notes">Стікери</span><strong id="stat-notes">0</strong><small data-t="ideas">Ідеї</small></button>
    </div>
+   <section class="creator-overview" id="creator-overview" aria-label="Аналітика соцмереж">
+    <div class="creator-overview-top">
+      <div><h2 id="creator-overview-title">Аналітика соцмереж</h2><p id="creator-overview-subtitle">Показники підключених акаунтів</p></div>
+      <button class="secondary-button creator-refresh" type="button" id="creator-refresh"><span aria-hidden="true">↻</span><span id="creator-refresh-label">Оновити</span></button>
+    </div>
+    <div id="creator-overview-content" aria-live="polite" class="creator-overview-content"></div>
+   </section>
    <div class="overview-grid">
     <div class="panel"><div class="panel-title"><h2 data-t="upcoming">Найближче</h2><button class="text-button" type="button" data-goto="reminders" data-t="viewAll">Усі</button></div><div id="home-reminders" class="compact-list"></div></div>
     <div class="panel"><div class="panel-title"><h2 data-t="contentPlan">Контент-план</h2><button class="text-button" type="button" data-goto="planner" data-t="viewAll">Усі</button></div><div id="home-plans" class="compact-list"></div></div>
