@@ -68,6 +68,7 @@
    fields.providers=data.providers||{};fields.connections=data.connections||[];status='ready';lastRefresh=Date.now();
   }catch{status='offline';fields.providers={};fields.connections=[]}
   render();
+  window.dispatchEvent(new Event('viver-connections-updated'));
  }
  function announce(text){const t=$('#toast');if(t){t.textContent=text;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3200)}}
  async function start(provider){
@@ -108,6 +109,6 @@
  window.addEventListener('focus',()=>{if(Date.now()-lastRefresh>4000)refresh()});
  window.addEventListener('hashchange',()=>{if(location.hash==='#platforms')refresh()});
  $('#language')?.addEventListener('change',render);
- window.VIVERConnections={refresh};
+ window.VIVERConnections={refresh,request,getConnections:()=>fields.connections.map(x=>({...x})),getStatus:()=>status};
  render();refresh();
 })();
