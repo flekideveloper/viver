@@ -118,7 +118,11 @@ async function callback(req,env,provider){
   const expires=now+Math.min(Math.max(Number(grant.expires_in)||3600,60),31536000)*1000;
   const access=await encrypted(env,grant.access_token);
   const refresh=grant.refresh_token?await encrypted(env,grant.refresh_token):null;
-  const old=await env.DB.prepare('SELECT refresh_enc FROM oauth_accounts WHERE client_hash=? AND provider=?').bind(pending.client_hash,provider).first();
+  const old=await env.DB.prepare('SELECT refresh_enc,subject FROM oauth_accounts WHERE client_hash=? AND provider=?').bind(pending.client_hash,provider).first();
+  if(provider==='youtube'&&old?.subject&&old.subject!==profile.id){
+   await env.DB.prepare('DELETE FROM youtube_cache WHERE client_hash=?').bind(pending.client_hash).run();
+   await env.DB.prepare('DELETE FROM youtube_snapshots WHERE client_hash=?').bind(pending.client_hash).run();
+  }
   await env.DB.prepare('INSERT INTO oauth_accounts(client_hash,provider,subject,label,avatar,token_enc,refresh_enc,expires_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?) ON CONFLICT(client_hash,provider) DO UPDATE SET subject=excluded.subject,label=excluded.label,avatar=excluded.avatar,token_enc=excluded.token_enc,refresh_enc=excluded.refresh_enc,expires_at=excluded.expires_at,updated_at=excluded.updated_at')
     .bind(pending.client_hash,provider,profile.id,profile.name.slice(0,120),profile.avatar.slice(0,500),access,refresh||old?.refresh_enc||null,expires,now).run();
   return textPage(true,profile.name+' connected. You can return to VIVER.');
@@ -144,6 +148,94 @@ async function refreshIfNeeded(env,row){
   return {...row,token_enc:encryptedAccess,refresh_enc:encryptedRefresh,expires_at:expires,expired:false};
  }catch(e){console.warn('VIVER refresh failed',row.provider);return {...row,expired:true}}
 }
+
+/** YouTube channel snapshot. Cached server-side to keep API quota predictable. */
+const YOUTUBE_CACHE_MS=10*60*1000;
+const asCount=value=>{
+ if(value===null||value===undefined||value==='')return null;
+ const n=Number(value);
+ return Number.isSafeInteger(n)&&n>=0?n:null;
+};
+async function youtubeApi(path,accessToken){
+ const res=await fetch('https://www.googleapis.com/youtube/v3/'+path,{headers:{Authorization:'Bearer '+accessToken}});
+ if(!res.ok){
+  if(res.status===401)throw new Error('youtube_token_rejected');
+  if(res.status===403)throw new Error('youtube_permission_or_quota');
+  throw new Error('youtube_api_unavailable');
+ }
+ return res.json();
+}
+async function readYouTubeHistory(env,clientHash,channelId){
+ const rows=await env.DB.prepare('SELECT date,view_count,subscriber_count,video_count FROM youtube_snapshots WHERE client_hash=? AND channel_id=? ORDER BY date DESC LIMIT 60').bind(clientHash,channelId).all();
+ return (rows.results||[]).reverse().map(x=>({date:x.date,views:x.view_count,subscribers:x.subscriber_count,videos:x.video_count}));
+}
+async function youtubeStats(req,env){
+ const capability=authHeader(req);
+ if(!capability)return json({error:'Connection key required'},401);
+ if(!config(env,'youtube'))return json({error:'youtube_not_configured'},409);
+ const clientHash=await hash(capability);
+ const row=await env.DB.prepare('SELECT * FROM oauth_accounts WHERE client_hash=? AND provider=?').bind(clientHash,'youtube').first();
+ if(!row)return json({error:'youtube_not_connected'},404);
+ const active=await refreshIfNeeded(env,row);
+ if(active.expired)return json({error:'youtube_reconnect_required'},401);
+ const now=Date.now();
+ const cached=await env.DB.prepare('SELECT channel_id,payload,updated_at FROM youtube_cache WHERE client_hash=?').bind(clientHash).first();
+ if(cached&&cached.channel_id===row.subject&&now-cached.updated_at<YOUTUBE_CACHE_MS){
+  try{
+   const snapshot=JSON.parse(cached.payload);
+   return json({...snapshot,history:await readYouTubeHistory(env,clientHash,row.subject),updatedAt:cached.updated_at,fromCache:true});
+  }catch{ /* Corrupt cache: fetch live instead. */ }
+ }
+ let channel,latest=[];
+ try{
+  const accessToken=await decrypted(env,active.token_enc);
+  const details=await youtubeApi('channels?part=snippet,statistics,contentDetails&mine=true',accessToken);
+  channel=(details.items||[]).find(x=>x.id===row.subject)||details.items?.[0];
+  if(!channel?.id||channel.id!==row.subject)return json({error:'youtube_channel_changed'},409);
+  const playlist=channel.contentDetails?.relatedPlaylists?.uploads;
+  if(playlist&&/^[A-Za-z0-9_-]+$/.test(playlist)){
+   try{
+    const items=await youtubeApi('playlistItems?part=snippet,contentDetails&maxResults=6&playlistId='+encodeURIComponent(playlist),accessToken);
+    const videoIds=(items.items||[]).map(x=>x.contentDetails?.videoId||x.snippet?.resourceId?.videoId).filter(x=>/^[A-Za-z0-9_-]{11}$/.test(x)).slice(0,6);
+    if(videoIds.length){
+     const videoData=await youtubeApi('videos?part=snippet,statistics,status&id='+videoIds.join(','),accessToken);
+     const indexed=new Map((videoData.items||[]).map(x=>[x.id,x]));
+     latest=videoIds.map(id=>indexed.get(id)).filter(x=>x&&x.status?.privacyStatus==='public').map(x=>({
+      id:x.id,title:String(x.snippet?.title||'YouTube video').slice(0,180),
+      publishedAt:x.snippet?.publishedAt||'',views:asCount(x.statistics?.viewCount),
+      likes:asCount(x.statistics?.likeCount),comments:asCount(x.statistics?.commentCount),
+      url:'https://www.youtube.com/watch?v='+encodeURIComponent(x.id)
+     })).slice(0,5);
+    }
+   }catch(err){console.warn('VIVER recent YouTube videos unavailable',err.message)}
+  }
+ }catch(err){
+  console.warn('VIVER channel statistics failed',err.message);
+  const error=['youtube_token_rejected','youtube_permission_or_quota'].includes(err.message)?err.message:'youtube_api_unavailable';
+  return json({error},error==='youtube_token_rejected'?401:503);
+ }
+ const stats=channel.statistics||{};
+ const snapshot={
+  channel:{
+   id:channel.id,title:String(channel.snippet?.title||row.label).slice(0,120),
+   description:String(channel.snippet?.description||'').slice(0,300),
+   avatar:String(channel.snippet?.thumbnails?.default?.url||'').slice(0,500),
+   url:'https://www.youtube.com/channel/'+encodeURIComponent(channel.id),
+   hiddenSubscribers:Boolean(stats.hiddenSubscriberCount)
+  },
+  totals:{
+   views:asCount(stats.viewCount),
+   subscribers:stats.hiddenSubscriberCount?null:asCount(stats.subscriberCount),
+   videos:asCount(stats.videoCount)
+  },
+  recent:latest
+ };
+ await env.DB.prepare('INSERT INTO youtube_cache(client_hash,channel_id,payload,updated_at) VALUES(?,?,?,?) ON CONFLICT(client_hash) DO UPDATE SET channel_id=excluded.channel_id,payload=excluded.payload,updated_at=excluded.updated_at')
+  .bind(clientHash,channel.id,JSON.stringify(snapshot),now).run();
+ await env.DB.prepare('INSERT INTO youtube_snapshots(client_hash,channel_id,date,view_count,subscriber_count,video_count,recorded_at) VALUES(?,?,?,?,?,?,?) ON CONFLICT(client_hash,channel_id,date) DO UPDATE SET view_count=excluded.view_count,subscriber_count=excluded.subscriber_count,video_count=excluded.video_count,recorded_at=excluded.recorded_at')
+  .bind(clientHash,channel.id,new Date(now).toISOString().slice(0,10),snapshot.totals.views??0,snapshot.totals.subscribers,snapshot.totals.videos??0,now).run();
+ return json({...snapshot,history:await readYouTubeHistory(env,clientHash,channel.id),updatedAt:now,fromCache:false});
+}
 async function connections(req,env){
  const token=authHeader(req);if(!token)return json({error:'Connection key required'},401);
  const clientHash=await hash(token);
@@ -159,6 +251,10 @@ async function disconnect(req,env,provider){
  if(!PROVIDERS[provider])return json({error:'Unknown provider'},404);
  const token=authHeader(req);if(!token)return json({error:'Connection key required'},401);
  const hashKey=await hash(token);
+ if(provider==='youtube'){
+  await env.DB.prepare('DELETE FROM youtube_cache WHERE client_hash=?').bind(hashKey).run();
+  await env.DB.prepare('DELETE FROM youtube_snapshots WHERE client_hash=?').bind(hashKey).run();
+ }
  await env.DB.prepare('DELETE FROM oauth_accounts WHERE client_hash=? AND provider=?').bind(hashKey,provider).run();
  return json({ok:true});
 }
@@ -171,6 +267,7 @@ export default {
   try{
    if(method==='GET'&&path==='/health')return json({ok:true,providers:allConfigs(env),frontend:SITE+'/viver/'});
    if(method==='GET'&&path==='/connections')return connections(req,env);
+   if(method==='GET'&&path==='/youtube/stats')return youtubeStats(req,env);
    const connect=/^\/auth\/start\/(youtube|tiktok|twitch|x)$/.exec(path);
    if(method==='POST'&&connect)return start(req,env,connect[1]);
    const callbackMatch=/^\/auth\/callback\/(youtube|tiktok|twitch|x)$/.exec(path);
