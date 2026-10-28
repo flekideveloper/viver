@@ -156,7 +156,7 @@ const vm=require('node:vm');
  $('#report-import').dispatchEvent(new window.Event('change',{bubbles:true}));
  await new Promise(r=>setTimeout(r,50));
  assert.equal(C.state.analytics.length,2,'actual CSV metrics imported');
- assert.equal($('.platform-row').length,0,'inactive social account rows removed');
+ assert.equal($$('.platform-row').length,0,'inactive social account rows removed');
  assert.equal($('.account-icon'),null,'fake account badge removed');
  assert($('#analytics-chart').textContent.includes('200'),'latest imported metric shown');
  const saved=JSON.parse(window.localStorage.getItem('viver-workspace-v1'));
