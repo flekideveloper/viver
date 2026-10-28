@@ -542,3 +542,14 @@ dialog{background:var(--card);border:1px solid var(--border);color:var(--text);b
 #page-platforms .imported-reports-collapse .analytics-panel{border:0;border-top:1px solid var(--border);border-radius:0;max-width:none;margin:0}
 @media(max-width:850px){.social-stat-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.social-two-panels{grid-template-columns:1fr}}
 @media(max-width:630px){#page-platforms .social-studio-panel,#page-platforms .connected-platform-hub{padding:15px}.connected-platform-tab{min-width:95px;padding:7px 9px}.social-profile{align-items:flex-start}.social-profile-action{font-size:10px}.social-goal-grid,.social-compare-grid{grid-template-columns:1fr}.social-post-row{flex-wrap:wrap}.social-post-metrics{order:3;width:100%;padding-left:0}.social-plan-row{align-items:flex-start;flex-direction:column}.social-plan-actions{flex-wrap:wrap;width:100%}.social-studio-head h2{font-size:14px}.social-studio-tabs button{padding:8px 9px;font-size:10px}}
+
+/* Small account jump in Overview, verified profile avatar in each social studio */
+.creator-provider-jump{width:100%;background:transparent;border-left:0;border-right:0;border-bottom:0;text-align:left;cursor:pointer;color:var(--text);font:inherit}
+.creator-provider-jump:hover{background:var(--hover)}
+.creator-provider-short{display:flex;flex-direction:column;gap:5px;min-width:0}
+.creator-provider-short strong{font-size:12px}
+.creator-provider-short small{font-size:10px;color:var(--sub)}
+.creator-provider-short>span{font-size:10px;color:var(--accent)}
+.social-profile>div{flex:1}
+.social-profile-avatar{height:40px;width:40px;border-radius:10px;object-fit:cover;flex:none;background:var(--hover)}
+.social-profile-fallback{display:grid;place-items:center;color:var(--text);font-size:16px}
