@@ -8,10 +8,11 @@
 <meta name="description" content="VIVER — простір для ідей, планування контенту та нагадувань.">
 <title>VIVER</title>
 <link rel="icon" href="./favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="./style.css?v=6">
+<link rel="stylesheet" href="./style.css?v=7">
 <script defer src="./app.js?v=6"></script>
 <script defer src="./features.js?v=6"></script>
 <script defer src="./connections.js?v=1"></script>
+<script defer src="./youtube.js?v=1"></script>
 </head>
 <body>
 <svg class="sprites" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
@@ -137,6 +138,20 @@
     <div class="connection-grid" id="viver-accounts" aria-live="polite"></div>
     <p class="connection-info" id="account-status-info"></p>
    </div>
+   <section class="panel youtube-live-panel" id="youtube-live-panel" aria-label="Статистика YouTube" hidden>
+    <div class="panel-title">
+     <div class="youtube-heading"><span class="youtube-heading-mark">▶</span><h2> YouTube · <span id="youtube-section-title">Канал</span></h2></div>
+     <button type="button" class="secondary-button" id="youtube-refresh"><svg><use href="#i-refresh"/></svg><span id="youtube-refresh-text">Оновити</span></button>
+    </div>
+    <div class="youtube-status" id="youtube-live-status" role="status" aria-live="polite"></div>
+    <div class="youtube-live-data" id="youtube-live-data" hidden>
+      <div class="youtube-channel-profile" id="youtube-channel-profile"></div>
+      <div class="youtube-live-metrics" id="youtube-live-metrics"></div>
+      <div class="youtube-history" id="youtube-history" hidden></div>
+      <div class="youtube-latest" id="youtube-latest"></div>
+      <div class="youtube-foot" id="youtube-live-foot"></div>
+    </div>
+   </section>
    <div class="panel analytics-panel"><div class="panel-title"><h2 data-t="statistics">Звіти</h2><div class="row-buttons"><button class="secondary-button" id="report-template" type="button" data-t="sampleCsv">Шаблон CSV</button><label class="secondary-button file-button" for="report-import"><svg><use href="#i-upload"/></svg><span data-t="importReport">Імпорт звіту</span><input id="report-import" type="file" accept=".csv,.json,text/csv,application/json" hidden></label></div></div>
     <div class="analytics-filters"><label><span data-t="platform">Платформа</span><select id="analytics-provider"><option value="youtube">YouTube</option><option value="tiktok">TikTok</option><option value="twitch">Twitch</option><option value="x">X</option></select></label><label><span data-t="metric">Показник</span><select id="analytics-metric"><option value="views" data-t="views">Перегляди</option><option value="followers" data-t="followers">Підписники</option><option value="likes" data-t="likes">Вподобання</option><option value="comments" data-t="comments">Коментарі</option><option value="shares" data-t="shares">Поширення</option></select></label></div>
     <div class="analytics-chart" id="analytics-chart"></div>
