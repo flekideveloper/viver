@@ -134,7 +134,9 @@
   const profile=linkOK(account.url)?'<a class="social-profile-action" href="'+escape(account.url)+'" target="_blank" rel="noopener noreferrer">'+text('Відкрити профіль ↗','Open profile ↗')+'</a>':'';
   const live=data.live?(data.live.online?'<div class="social-live live"><span>● LIVE</span><strong>'+escape(data.live.title||'')+'</strong><small>'+number(data.live.viewers)+' '+text('глядачів','viewers')+' · '+escape(data.live.game||'')+'</small></div>':
    '<div class="social-live"><span>'+text('Зараз не в ефірі','Currently offline')+'</span><small>'+escape(data.live.title||'')+'</small></div>'):'';
-  return '<div class="social-profile"><div><strong>'+escape(account.label||name[selected])+'</strong><span>'+text('Реальні дані платформи · ','Official platform data · ')+new Date(data.updatedAt).toLocaleString(ua()?'uk-UA':'en-US')+'</span></div>'+profile+'</div>'+
+  const avatar=String(account.avatar||'');
+  const avatarHTML=/^https:\/\//.test(avatar)?'<img class="social-profile-avatar" src="'+escape(avatar)+'" alt="" referrerpolicy="no-referrer" loading="lazy">':'<span class="social-profile-avatar social-profile-fallback">'+symbol[selected]+'</span>';
+  return '<div class="social-profile">'+avatarHTML+'<div><strong>'+escape(account.label||name[selected])+'</strong><span>'+text('Реальні дані платформи · ','Official platform data · ')+new Date(data.updatedAt).toLocaleString(ua()?'uk-UA':'en-US')+'</span></div>'+profile+'</div>'+
    (live||'')+'<div class="social-stat-grid">'+(metricKeys.length?metricKeys.map(k=>valueCard(k,metrics[k])).join(''):'<p class="social-empty">'+text('Профіль не повернув доступних лічильників.','No profile metrics returned.')+'</p>')+'</div>'+
    '<div class="social-two-panels"><section class="social-section"><h3>'+text('Останні публікації','Recent content')+'</h3>'+contentList(6)+'</section>'+
    '<section class="social-section"><h3>'+text('Історія показників','Metric history')+'</h3>'+historyView()+'</section></div>'+
