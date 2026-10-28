@@ -66,8 +66,18 @@ const mockFetch=async(url,opts)=>{
  }
  if(String(url).includes('oauth2.googleapis.com/token'))return Response.json({access_token:'secret-access-token',refresh_token:'secret-refresh-token',expires_in:3600});
  if(String(url).includes('youtube/v3/channels'))return Response.json({items:[{id:'test-channel',snippet:{title:'Creator Test',description:'Test channel',thumbnails:{default:{url:'https://example.com/avatar.jpg'}}},statistics:{viewCount:'15200',subscriberCount:'789',videoCount:'12',hiddenSubscriberCount:false},contentDetails:{relatedPlaylists:{uploads:'UUTESTUPLOADS'}}}]});
- if(String(url).includes('youtube/v3/playlistItems'))return Response.json({items:[{contentDetails:{videoId:'AbCdEfGhIjK'}}]});
- if(String(url).includes('youtube/v3/videos'))return Response.json({items:[{id:'AbCdEfGhIjK',snippet:{channelId:'test-channel',title:'Latest clip',publishedAt:'2026-10-20T12:00:00Z',thumbnails:{default:{url:'https://example.com/thumb.jpg'}}},status:{privacyStatus:'public'},contentDetails:{duration:'PT3M40S'},statistics:{viewCount:'420',likeCount:'30',commentCount:'7'}}]});
+ if(String(url).includes('youtube/v3/playlistItems')){
+  const cursor=new URL(url).searchParams.get('pageToken');
+  return cursor==='NEXT_PAGE'?Response.json({items:[{contentDetails:{videoId:'LmNoPqRsTuV'}}]}):Response.json({items:[{contentDetails:{videoId:'AbCdEfGhIjK'}}],nextPageToken:'NEXT_PAGE'});
+ }
+ if(String(url).includes('youtube/v3/videos')){
+  const ids=(new URL(url).searchParams.get('id')||'').split(',');
+  const known=[
+   {id:'AbCdEfGhIjK',snippet:{channelId:'test-channel',title:'Latest clip',publishedAt:'2026-10-20T12:00:00Z',thumbnails:{default:{url:'https://example.com/thumb.jpg'}}},status:{privacyStatus:'public'},contentDetails:{duration:'PT3M40S'},statistics:{viewCount:'420',likeCount:'30',commentCount:'7'}},
+   {id:'LmNoPqRsTuV',snippet:{channelId:'test-channel',title:'Older clip',publishedAt:'2026-10-15T12:00:00Z'},status:{privacyStatus:'public'},contentDetails:{duration:'PT2M'},statistics:{viewCount:'300',likeCount:'15',commentCount:'4'}}
+  ];
+  return Response.json({items:known.filter(x=>ids.includes(x.id))});
+ }
  return Response.json({error:'mock provider not implemented'}, {status:404});
 };
 const sandbox={crypto:webcrypto,URL,URLSearchParams,TextEncoder,TextDecoder,Request,Response,fetch:mockFetch,btoa,atob,console,Uint8Array,Date,JSON,Error};
@@ -155,6 +165,12 @@ const req=(path,method='GET',origin='https://flekideveloper.github.io',token=key
  assert.equal(videos.videos[0].week.subscribersGained,3);
  assert(!JSON.stringify(videos).includes('secret-access-token'),'video catalog exposes no access tokens');
  assert.equal((await (await worker.fetch(req('/youtube/videos'),env)).json()).fromCache,true,'video library cached in D1');
+ assert.equal(videos.nextPageToken,'NEXT_PAGE','real YouTube page token returned for older videos');
+ const second=await (await worker.fetch(req('/youtube/videos?cursor=NEXT_PAGE'),env)).json();
+ assert.equal(second.videos.length,1,'older upload page loaded');
+ assert.equal(second.videos[0].id,'LmNoPqRsTuV','pagination returned the correct older upload');
+ assert.equal(second.nextPageToken,null,'pagination ends naturally');
+ assert.equal((await worker.fetch(req('/youtube/videos?cursor=%3Cscript%3E'),env)).status,400,'bad pagination cursor rejected');
  const retentionResponse=await worker.fetch(req('/youtube/videos/AbCdEfGhIjK/retention'),env);
  assert.equal(retentionResponse.status,200,'owned-video retention endpoint works');
  const retention=await retentionResponse.json();
@@ -164,6 +180,11 @@ const req=(path,method='GET',origin='https://flekideveloper.github.io',token=key
  const comparison=await (await worker.fetch(req('/youtube/videos/compare?a=AbCdEfGhIjK&b=XxYyZzAaBbC'),env)).json();
  assert.equal(comparison.error,'video_not_in_channel','unowned video comparison forbidden');
  assert.equal((await worker.fetch(req('/youtube/videos/compare?a=AbCdEfGhIjK&b=AbCdEfGhIjK'),env)).status,400,'same video not allowed');
+ const validCompare=await (await worker.fetch(req('/youtube/videos/compare?a=AbCdEfGhIjK&b=LmNoPqRsTuV'),env)).json();
+ assert.equal(validCompare.videos.length,2,'two owned videos can be compared even across pagination');
+ assert.equal(validCompare.videos[0].report.views,440,'first 7-day report reflects Google metrics');
+ assert.equal(validCompare.videos[1].report.views,440,'second 7-day report reflects Google metrics');
+ assert.equal(validCompare.comparable,true,'two mature reports are marked comparable');
  assert.equal((await worker.fetch(req('/connections/youtube','DELETE'),env)).status,200);
  assert.equal(videoCache.size,0,'video library cache erased on disconnect');
  assert.equal(analyticsCache.size,0,'analytics cache purged on disconnect');
