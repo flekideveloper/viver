@@ -8,7 +8,7 @@ const msg=(uk,en)=>L()==='uk'?uk:en;
 const stages=['idea','script','record','edit','ready','published'];
 const stageName=s=>({idea:msg('Ідея','Idea'),draft:msg('У процесі','In progress'),script:msg('Сценарій','Script'),record:msg('Запис','Recording'),edit:msg('Монтаж','Editing'),ready:msg('Готово','Ready'),published:msg('Опубліковано','Published')})[s]||s;
 const keyOf=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-let planMode='list',calendarMonth=new Date(),selectedDay=keyOf(new Date()),expandedChecks=new Set(),connecting='',selectedGroup='all',pendingImage='';
+let planMode='list',calendarMonth=new Date(),selectedDay=keyOf(new Date()),expandedChecks=new Set(),connecting='',selectedGroup='all',pendingImage='',editingNoteDetail='';
 calendarMonth.setDate(1);calendarMonth.setHours(12,0,0,0);
 const asInput=d=>new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16);
 function setMode(mode){
@@ -27,15 +27,15 @@ function changeMonth(direction){
 $('#calendar-prev').addEventListener('click',()=>changeMonth(-1));
 $('#calendar-next').addEventListener('click',()=>changeMonth(1));
 $('#calendar-today').addEventListener('click',()=>{calendarMonth=new Date();calendarMonth.setDate(1);selectedDay=keyOf(new Date());renderCalendar()});
-$('#planner-new').addEventListener('click',()=>{setMode('list');$('#plan-title').focus()});
+$('#planner-new').addEventListener('click',()=>{setMode('list');$('#plan-new-top').click()});
 function createForDay(type,day=selectedDay){
  c.nav(type==='reminder'?'reminders':'planner');
  if(type==='reminder'){
-  $('#reminder-cancel').click();
+  $('#reminder-new-top').click();
   $('#reminder-due').value=day+'T18:00';
   $('#reminder-title').focus();
  }else{
-  setMode('list');$('#plan-cancel').click();
+  setMode('list');$('#plan-new-top').click();
   $('#plan-date').value=day+'T18:00';
   $('#plan-title').focus();
  }
@@ -240,7 +240,7 @@ function onBoardRendered(){
   el.hidden=selectedGroup!=='all'&&n.group!==selectedGroup;
   const top=el.querySelector('.sticky-actions');
   top.insertAdjacentHTML('afterbegin','<button type="button" data-note-menu="'+E(n.id)+'" title="'+msg('Дії','Actions')+'" aria-label="'+msg('Дії','Actions')+'">···</button>');
-  el.insertAdjacentHTML('beforeend','<div class="note-menu" hidden data-menu-for="'+E(n.id)+'"><button type="button" data-note-action="group" data-action-id="'+E(n.id)+'">'+msg('Група','Group')+'</button><button type="button" data-note-action="image" data-action-id="'+E(n.id)+'">'+msg('Фото','Image')+'</button><button type="button" data-note-action="url" data-action-id="'+E(n.id)+'">'+msg('Посилання','Link')+'</button><button type="button" data-note-action="connect" data-action-id="'+E(n.id)+'">'+msg('З’єднати','Connect')+'</button>'+(n.image?'<button type="button" data-note-action="remove-image" data-action-id="'+E(n.id)+'">'+msg('Прибрати фото','Remove image')+'</button>':'')+'</div>');
+  el.insertAdjacentHTML('beforeend','<div class="note-menu" hidden data-menu-for="'+E(n.id)+'"><button type="button" data-note-action="details" data-action-id="'+E(n.id)+'">'+msg('Деталі','Details')+'</button><button type="button" data-note-action="image" data-action-id="'+E(n.id)+'">'+msg('Зображення','Image')+'</button><button type="button" data-note-action="connect" data-action-id="'+E(n.id)+'">'+msg('З’єднати','Connect')+'</button>'+(n.image?'<button type="button" data-note-action="remove-image" data-action-id="'+E(n.id)+'">'+msg('Прибрати зображення','Remove image')+'</button>':'')+'</div>');
   if(n.group)el.querySelector('.sticky-head').insertAdjacentHTML('afterend','<span class="sticky-group">'+E(n.group)+'</span>');
   if(n.image)el.querySelector('.sticky-bottom').insertAdjacentHTML('beforebegin','<img class="sticky-photo" alt="" src="'+E(n.image)+'">');
   if(n.link&&/^https:\/\//i.test(n.link))el.querySelector('.sticky-bottom').insertAdjacentHTML('afterbegin','<a class="sticky-link" rel="noopener noreferrer" target="_blank" href="'+E(n.link)+'" title="'+E(n.link)+'">↗</a>');
@@ -279,21 +279,33 @@ layer.addEventListener('click',ev=>{
  const n=S().notes.find(n=>n.id===act.dataset.actionId);if(!n)return;
  $$('.note-menu').forEach(m=>m.hidden=true);
  switch(act.dataset.noteAction){
-  case 'group':{
-   const name=prompt(msg('Назва групи (порожньо — без групи)','Group name (empty clears group)'),n.group||'');
-   if(name===null)return;n.group=name.trim().slice(0,36);selectedGroup='all';save();c.renderBoard();break;
-  }
-  case 'url':{
-   const value=prompt(msg('Посилання https:// (порожньо — видалити)','HTTPS link (empty to remove)'),n.link||'');
-   if(value===null)return;
-   if(value.trim()&&!/^https:\/\/[^\s]+$/i.test(value.trim())){toast(msg('Потрібне посилання HTTPS','An HTTPS URL is required'));return}
-   n.link=value.trim().slice(0,500);save();c.renderBoard();break;
-  }
+  case 'details':
+   editingNoteDetail=n.id;
+   $('#note-details-group').value=n.group||'';
+   $('#note-details-link').value=n.link||'';
+   $('#note-details-dialog').showModal();
+   $('#note-details-group').focus();
+   break;
   case 'image':pendingImage=n.id;$('#note-image-input').click();break;
   case 'remove-image':n.image='';save();c.renderBoard();break;
   case 'connect':connecting=n.id;layer.classList.add('connecting');toast(msg('Натисни інший стікер для з’єднання','Click another sticky note to connect'));break;
  }
 },true);
+const noteDialog=$('#note-details-dialog');
+$('#note-details-close').addEventListener('click',()=>noteDialog.close());
+$('#note-details-cancel').addEventListener('click',()=>noteDialog.close());
+noteDialog.addEventListener('close',()=>{editingNoteDetail=''});
+$('#note-details-form').addEventListener('submit',ev=>{
+ ev.preventDefault();
+ const n=S().notes.find(n=>n.id===editingNoteDetail);if(!n)return;
+ const group=$('#note-details-group').value.trim().slice(0,36);
+ const link=$('#note-details-link').value.trim().slice(0,500);
+ if(link&&(!/^https:\/\/[^\s]+$/i.test(link))){toast(msg('Вкажи правильне HTTPS-посилання','Enter a valid HTTPS link'));return}
+ const previous={group:n.group,link:n.link};
+ n.group=group;n.link=link;
+ if(!save()){n.group=previous.group;n.link=previous.link;return}
+ noteDialog.close();selectedGroup='all';c.renderBoard();
+});
 document.addEventListener('click',ev=>{if(!ev.target.closest('.note-menu,.sticky-actions'))$$('.note-menu').forEach(m=>m.hidden=true)});
 $('#note-image-input').addEventListener('change',async ev=>{
  const file=ev.target.files?.[0],n=S().notes.find(n=>n.id===pendingImage);ev.target.value='';pendingImage='';
