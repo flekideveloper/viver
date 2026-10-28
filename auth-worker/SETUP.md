@@ -17,7 +17,7 @@ Worker `GET /health` показує `providers.youtube/tiktok/twitch/x`, які 
 Windows PowerShell (підтримувана команда):
 
 ```powershell
-[Convert]::ToBase64String([System.Security.Cryptography.RandomNumberGenerator]::GetBytes(32))
+$bytes = New-Object byte[] 32; $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create(); $rng.GetBytes($bytes); $rng.Dispose(); [Convert]::ToBase64String($bytes)
 ```
 
 Додай отримане значення як **Secret** `TOKEN_KEY` (не як звичайну змінну). Не змінюй цей ключ після підключення акаунтів: старі зашифровані токени стане неможливо прочитати.
@@ -34,9 +34,9 @@ Windows PowerShell (підтримувана команда):
 | X (OAuth 2.0 Web App) | `X_CLIENT_ID`, `X_CLIENT_SECRET` | `https://viver-auth.flekideveloper.workers.dev/auth/callback/x` |
 
 - **Google:** у Google Cloud Console створи проєкт VIVER, налаштуй OAuth consent screen, увімкни YouTube Data API v3 **та YouTube Analytics API**, створи клієнт типу *Web application*, додай redirect URI. Scopes: `https://www.googleapis.com/auth/youtube.readonly` і `https://www.googleapis.com/auth/yt-analytics.readonly` (обидва read-only). У Google Auth Platform → Data Access додай ці дозволи. Для деяких режимів і користувачів може знадобитися публікація / перевірка застосунку.
-- **TikTok:** у TikTok for Developers створити застосунок і додати **Login Kit for Web**. Запитуваний scope `user.info.basic`. Публічне використання й додаткові scope можуть потребувати approval.
-- **Twitch:** у Twitch Developer Console створи Application, вибери confidential/server app і додай точний OAuth Redirect URL. Для базового профілю VIVER не запитує додаткові дозволи на чат чи стрім.
-- **X:** у Developer Console створи App, увімкни OAuth 2.0, Client Type Web App (confidential), додай Callback URL. Scopes: `users.read tweet.read offline.access`. API-доступ може бути платним; за потреби перевір чинні тарифи та обмеження.
+- **TikTok:** створи застосунок із **Login Kit for Web** та Display API. Зараз VIVER запитує `user.info.basic,user.info.profile,user.info.stats,video.list` для профілю, фоловерів, лайків та власних публічних відео. Кожен scope потрібно дозволити в TikTok Developer Portal; для деяких потрібні перевірка застосунку та approval. Після зміни scopes підключи TikTok повторно.
+- **Twitch:** створи confidential застосунок у Twitch Developer Console з точним redirect URI. VIVER запитує `moderator:read:followers` для кількості фоловерів; Helix API надає також поточний стрім, глядачів онлайн, доступні VOD і кліпи. Окремі повні звіти утримання/приросту за минулі 7 днів Twitch Helix у такому вигляді не надає.
+- **X:** у Developer Console створи Web App (confidential) з OAuth 2.0 і Callback URL. Scopes: `users.read tweet.read offline.access`. VIVER читає дозволені `public_metrics` профілю й пости. X API має тарифні/квотні обмеження та може не повертати impressions; VIVER не показує вигадані значення.
 
 Після додавання ключів у Worker його `/health` автоматично покаже `true` для налаштованих платформ. Кнопка «Підключити» у VIVER стане доступною. Кожен провайдер налаштовується незалежно.
 
@@ -84,3 +84,13 @@ node tests/oauth.cjs
 - https://developers.google.com/youtube/analytics/reference/reports/query
 - https://developers.google.com/youtube/analytics/channel_reports
 - https://developers.google.com/youtube/analytics/dimensions
+
+## Вкладки аналітики v0.9
+
+Кожен акаунт має окремий OAuth-ключ і доступ до своїх показників через `GET /social/{twitch|tiktok|x}/overview`. Вкладка платформи у **Статистиці** з'являється **тільки якщо відповідний акаунт реально підключений**. У YouTube збережено Creator Studio, включно з YouTube Analytics API.
+
+Для Twitch, TikTok та X є вкладки **Огляд, Контент, Планер, Цілі, Сповіщення, Порівняння**. Це дані з офіційних API: лічильники профілю, опубліковані матеріали, поточний ефір у Twitch, та локальні цілі/події. Якщо немає історичного звіту, порівняння публікацій показує **накопичені лічильники**, а зміна за 7 днів з'являється тільки після наявності справжніх вимірювань із різницею 7 днів.
+
+Сервер зберігає 15-хвилинний кеш у D1 `social_overview_cache` та історію щоденних знімків у `social_metric_snapshots`. Дані розділено за capability-hash, платформою та provider account ID. Відключення видаляє відповідні кеш і знімки. Локальні цілі й події зберігаються в браузері під `viver-social-studio-v1`.
+
+Реєстрація застосунків TikTok, Twitch та X **не виконується автоматично**: налаштуй OAuth Client ID/Secret безпосередньо в Cloudflare Secrets. Без них реальний вхід і відповідні вкладки не працюватимуть. Для Google/YouTube повторно створювати акаунт не потрібно.
