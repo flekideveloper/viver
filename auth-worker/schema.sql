@@ -48,3 +48,11 @@ CREATE TABLE IF NOT EXISTS youtube_analytics_cache (
   payload TEXT NOT NULL,
   updated_at INTEGER NOT NULL
 );
+
+-- Only public, owner-verified YouTube upload metadata and read-only performance snapshots.
+CREATE TABLE IF NOT EXISTS youtube_video_cache (
+ client_hash TEXT PRIMARY KEY,
+ channel_id TEXT NOT NULL,
+ payload TEXT NOT NULL,
+ updated_at INTEGER NOT NULL
+);
