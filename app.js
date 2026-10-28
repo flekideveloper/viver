@@ -240,7 +240,7 @@ function renderTheme(){
  document.documentElement.dataset.theme=state.theme;
  const themeColors={dark:'#111215',light:'#f8f8f7',gray:'#292a2f',cosmic:'#0a0f23'};
  $('meta[name="theme-color"]').content=themeColors[state.theme]||themeColors.dark;
- $('[data-theme-option]').forEach(b=>{const active=b.dataset.themeOption===state.theme;b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active))});
+ $$('[data-theme-option]').forEach(b=>{const active=b.dataset.themeOption===state.theme;b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active))});
 }
 $$('[data-theme-option]').forEach(b=>b.addEventListener('click',()=>{state.theme=b.dataset.themeOption;save();renderTheme()}));
 $('#language').addEventListener('change',ev=>{state.language=ev.target.value==='en'?'en':'uk';save();lang();if(editingPlan){$('#plan-form-heading').textContent=t('editPost');$('#plan-save').textContent=t('saveChanges')}if(editingReminder){$('#reminder-form-heading').textContent=t('editReminder');$('#reminder-save').textContent=t('saveChanges')}});
