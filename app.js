@@ -9,7 +9,7 @@ const validDate=s=>typeof s==='string'&&s.length>0&&Number.isFinite(new Date(s).
 const clamp=(n,min,max)=>Math.min(max,Math.max(min,n));
 const metricValue=v=>v===null||v===undefined||v===''?null:Number.isFinite(Number(v))&&Number(v)>=0?Math.min(Number(v),1e15):null;
 const translations={
- uk:{workspace:'РОБОЧИЙ ПРОСТІР',home:'Огляд',planner:'Планер',reminders:'Нагадування',board:'Дошка ідей',platforms:'Платформи',settings:'Налаштування',local:'Дані на цьому пристрої',
+ uk:{workspace:'РОБОЧИЙ ПРОСТІР',home:'Огляд',planner:'Планер',calendar:'Календар',gray:'Сіра',cosmic:'Космічна',reminders:'Нагадування',board:'Дошка ідей',platforms:'Платформи',settings:'Налаштування',local:'Дані на цьому пристрої',
  overviewTitle:'Огляд',scheduled:'Заплановано',content:'Контент',openTasks:'Активні нагадування',tasks:'Завдання',notes:'Стікери',ideas:'Ідеї',upcoming:'Найближче',viewAll:'Усі',contentPlan:'Контент-план',
  newPost:'Новий запис',title:'Назва',platform:'Платформа',stage:'Стан',date:'Дата й час',details:'Нотатка',optional:'Необов’язково',other:'Інше',idea:'Ідея',draft:'У процесі',ready:'Готово',published:'Опубліковано',addPost:'Додати запис',myContent:'Мій контент',all:'Усі',cancel:'Скасувати',saveChanges:'Зберегти зміни',editPost:'Редагувати запис',contentPlaceholder:'Назва відео або стриму',
  alerts:'Сповіщення',newReminder:'Нове нагадування',taskPlaceholder:'Що потрібно зробити?',priority:'Пріоритет',normal:'Звичайний',high:'Високий',low:'Низький',addReminder:'Додати',myReminders:'Мої нагадування',open:'Активні',done:'Готові',editReminder:'Редагувати нагадування',
@@ -17,7 +17,7 @@ const translations={
  appearance:'Вигляд',dark:'Темна',light:'Світла',language:'Мова',backup:'Резервна копія',export:'Експорт',import:'Імпорт',reset:'Видалити локальні дані',delete:'Видалити',storageNotice:'Нагадування, планер і стікери зберігаються лише в цьому браузері.',searchPlaceholder:'Знайти в моїх записах…',close:'Закрити',
  noReminders:'Нагадувань ще немає',noPlans:'Записів ще немає',noResults:'Нічого не знайдено',noNotes:'Нотатка',emptyNote:'Нова ідея…',edit:'Редагувати',duplicate:'Дублювати',remove:'Видалити',overdue:'Прострочено',
  created:'Збережено',updated:'Оновлено',removed:'Видалено',confirmDelete:'Видалити запис?',confirmAll:'Видалити всі локальні дані VIVER? Цю дію не можна скасувати.',confirmAgain:'Підтверди остаточне видалення всіх нотаток і планів.',confirmImport:'Замінити поточні записи даними з файлу?',badBackup:'Невірний файл резервної копії',tooLarge:'Максимальний розмір файлу — 2 МБ',backupDone:'Копію збережено',importDone:'Копію відновлено',storageFail:'Не вдалося зберегти дані. Зроби резервну копію.',notificationOn:'Сповіщення увімкнено, поки VIVER відкритий',notificationOff:'Браузер не дозволяє сповіщення',notificationUnsupported:'У цьому браузері сповіщення недоступні',notifyPrefix:'Нагадування: ',noteCount:'сті́керів'},
- en:{workspace:'WORKSPACE',home:'Overview',planner:'Planner',reminders:'Reminders',board:'Idea board',platforms:'Platforms',settings:'Settings',local:'Stored on this device',
+ en:{workspace:'WORKSPACE',home:'Overview',planner:'Planner',calendar:'Calendar',gray:'Gray',cosmic:'Cosmic',reminders:'Reminders',board:'Idea board',platforms:'Platforms',settings:'Settings',local:'Stored on this device',
  overviewTitle:'Overview',scheduled:'Scheduled',content:'Content',openTasks:'Open reminders',tasks:'Tasks',notes:'Sticky notes',ideas:'Ideas',upcoming:'Up next',viewAll:'View all',contentPlan:'Content plan',
  newPost:'New content',title:'Title',platform:'Platform',stage:'Status',date:'Date & time',details:'Note',optional:'Optional',other:'Other',idea:'Idea',draft:'In progress',ready:'Ready',published:'Published',addPost:'Add content',myContent:'My content',all:'All',cancel:'Cancel',saveChanges:'Save changes',editPost:'Edit content',contentPlaceholder:'Video or stream title',
  alerts:'Notifications',newReminder:'New reminder',taskPlaceholder:'What needs doing?',priority:'Priority',normal:'Normal',high:'High',low:'Low',addReminder:'Add',myReminders:'My reminders',open:'Open',done:'Done',editReminder:'Edit reminder',
@@ -29,7 +29,7 @@ const translations={
 let state=fresh();
 function normalise(d){
  const s=fresh();if(!d||typeof d!=='object'||Array.isArray(d))return s;
- s.theme=d.theme==='light'?'light':'dark';s.language=d.language==='en'?'en':'uk';
+ s.theme=['dark','light','gray','cosmic'].includes(d.theme)?d.theme:'dark';s.language=d.language==='en'?'en':'uk';
  if(Array.isArray(d.plans))s.plans=d.plans.slice(0,500).filter(p=>p&&typeof p.title==='string'&&validDate(p.date)).map(p=>({id:String(p.id||uid()).slice(0,90),title:p.title.slice(0,110),date:p.date,platform:['youtube','tiktok','twitch','x','other'].includes(p.platform)?p.platform:'other',status:['idea','draft','script','record','edit','ready','published'].includes(p.status)?p.status:'idea',notes:String(p.notes||'').slice(0,350),checks:Array.isArray(p.checks)?p.checks.slice(0,60).filter(c=>c&&typeof c.text==='string').map(c=>({id:String(c.id||uid()).slice(0,90),text:c.text.slice(0,120),done:!!c.done})):[],created:Number(p.created)||Date.now()}));
  if(Array.isArray(d.reminders))s.reminders=d.reminders.slice(0,500).filter(r=>r&&typeof r.title==='string'&&validDate(r.due)).map(r=>({id:String(r.id||uid()).slice(0,90),title:r.title.slice(0,110),due:r.due,priority:['low','normal','high'].includes(r.priority)?r.priority:'normal',repeat:['none','daily','weekly','monthly','weekdays'].includes(r.repeat)?r.repeat:'none',weekdays:Array.isArray(r.weekdays)?r.weekdays.filter(n=>Number.isInteger(n)&&n>=0&&n<=6).slice(0,7):[],anchorDay:Number.isInteger(r.anchorDay)&&r.anchorDay>=1&&r.anchorDay<=31?r.anchorDay:new Date(r.due).getDate(),done:!!r.done,notified:!!r.notified,created:Number(r.created)||Date.now()}));
  if(Array.isArray(d.notes))s.notes=d.notes.slice(0,300).filter(n=>n&&typeof n.id==='string').map(n=>({id:n.id.slice(0,90),text:String(n.text||'').slice(0,3000),color:COLORS[n.color]?n.color:'yellow',x:clamp(Number(n.x)||0,0,1345),y:clamp(Number(n.y)||0,0,750),z:clamp(Number(n.z)||1,1,9999999),group:String(n.group||'').slice(0,36),link:/^https:\/\//i.test(String(n.link||''))?String(n.link).slice(0,500):'',image:typeof n.image==='string'&&/^data:image\/(?:png|jpeg|webp);base64,/i.test(n.image)&&n.image.length<330000?n.image:'',links:Array.isArray(n.links)?n.links.filter(v=>typeof v==='string').slice(0,12):[]}));
@@ -57,11 +57,12 @@ function lang(){
 }
 function theme(){
  document.documentElement.dataset.theme=state.theme;
- $('meta[name="theme-color"]').content=state.theme==='dark'?'#111215':'#f8f8f7';
- $$('[data-theme-option]').forEach(el=>el.classList.toggle('active',el.dataset.themeOption===state.theme));
+ const themeColors={dark:'#111215',light:'#f8f8f7',gray:'#292a2f',cosmic:'#0a0f23'};
+ $('meta[name="theme-color"]').content=themeColors[state.theme]||themeColors.dark;
+ $('[data-theme-option]').forEach(el=>{const active=el.dataset.themeOption===state.theme;el.classList.toggle('active',active);el.setAttribute('aria-pressed',String(active))});
 }
 function nav(next,updateHash=true){
- if(!['home','planner','reminders','board','platforms','settings'].includes(next))next='home';
+ if(!['home','planner','calendar','reminders','board','platforms','settings'].includes(next))next='home';
  page=next;
  $$('.page').forEach(el=>{const active=el.id==='page-'+page;el.classList.toggle('active',active);el.setAttribute('aria-hidden',String(!active))});
  $$('[data-page]').forEach(el=>{el.classList.toggle('active',el.dataset.page===page);if(el.dataset.page===page)el.setAttribute('aria-current','page');else el.removeAttribute('aria-current')});
@@ -290,5 +291,5 @@ document.addEventListener('keydown',ev=>{
  if(ev.key==='Escape'){$('#sidebar').classList.remove('open');$('#scrim').classList.remove('show')}
 });
 window.VIVERCore={get state(){return state},save,renderHome,renderPlans,renderReminders,renderBoard,nav,toast,esc,t,dateFmt,stageLabel,uid,normalise,validDate,get page(){return page},get noteColor(){return noteColor}};
-defaults();renderTheme();setZoom(1);lang();nav(['home','planner','reminders','board','platforms','settings'].includes(location.hash.slice(1))?location.hash.slice(1):'home',false);notifyDue();
+defaults();renderTheme();setZoom(1);lang();nav(['home','planner','calendar','reminders','board','platforms','settings'].includes(location.hash.slice(1))?location.hash.slice(1):'home',false);notifyDue();
 })();
