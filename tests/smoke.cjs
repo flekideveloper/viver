@@ -49,7 +49,7 @@ const vm=require('node:vm');
  assert.equal(JSON.parse(window.localStorage.getItem('viver-workspace-v1')).theme,'cosmic','cosmic preference saved');
  click('[data-page="calendar"]');
  assert.equal($('#page-calendar').classList.contains('active'),true,'calendar is its own page');
- assert($('.calendar-cell').length>=28,'full month grid');
+ assert($$('.calendar-cell').length>=28,'full month grid');
  click('#calendar-prev');click('#calendar-today');
  assert($('#calendar-selected-date').textContent.length>0,'calendar day agenda visible');
  const firstDay=$('.calendar-cell [data-calendar-select]').dataset.calendarSelect;
