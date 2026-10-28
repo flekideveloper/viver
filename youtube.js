@@ -9,19 +9,19 @@
  const time=v=>{const d=new Date(v);return Number.isNaN(d.getTime())?'—':d.toLocaleString(ua()?'uk-UA':'en-US',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})};
  const panel=$('#youtube-live-panel'),status=$('#youtube-live-status'),dataEl=$('#youtube-live-data'),button=$('#youtube-refresh');
  if(!panel||!window.VIVERConnections)return;
- let model=null,loading=false,lastFetch=0,wasConnected=false;
+ let model=null,loading=false,lastFetch=0,wasConnected=false,errorMessage='';
  const client=window.VIVERConnections;
  const linked=()=>client.getConnections().some(x=>x.provider==='youtube'&&x.connected);
  function state(message){
   status.textContent=message;status.hidden=!message;
  }
  function render(){
-  if(!linked()){panel.hidden=true;model=null;lastFetch=0;wasConnected=false;return}
+  if(!linked()){panel.hidden=true;model=null;lastFetch=0;wasConnected=false;errorMessage='';return}
   panel.hidden=false;
   $('#youtube-section-title').textContent=tr('Мій канал','My channel');
   $('#youtube-refresh-text').textContent=tr('Оновити','Refresh');
   button.disabled=loading;
-  if(!model){dataEl.hidden=true;state(loading?tr('Отримуємо статистику каналу…','Loading channel statistics…'):tr('Натисни «Оновити», щоб завантажити статистику.','Press Refresh to load your statistics.'));return}
+  if(!model){dataEl.hidden=true;state(loading?tr('Отримуємо статистику каналу…','Loading channel statistics…'):(errorMessage||tr('Натисни «Оновити», щоб завантажити статистику.','Press Refresh to load your statistics.')));return}
   dataEl.hidden=false;
   if(!loading)state('');
   const ch=model.channel||{},totals=model.totals||{};
@@ -55,7 +55,7 @@
  }
  async function load(force=false){
   if(!linked()||loading||(model&&!force&&Date.now()-lastFetch<60000))return;
-  loading=true;render();
+  loading=true;errorMessage='';render();
   try{
    const x=await client.request('/youtube/stats');
    if(!linked())return;
@@ -72,7 +72,7 @@
     youtube_channel_changed:tr('Канал змінився. Підключи YouTube повторно.','Your channel changed. Reconnect YouTube.'),
     youtube_api_unavailable:tr('YouTube API наразі недоступний. Спробуй згодом.','YouTube API is unavailable. Try again later.')
    };
-   dataEl.hidden=true;state(messages[error]||tr('Не вдалося отримати статистику YouTube. Перевір з’єднання та повтори спробу.','Could not load YouTube statistics. Check your connection and retry.'));
+   dataEl.hidden=true;errorMessage=messages[error]||tr('Не вдалося отримати статистику YouTube. Перевір з’єднання та повтори спробу.','Could not load YouTube statistics. Check your connection and retry.');
   }finally{loading=false;render()}
  }
  function update(){
