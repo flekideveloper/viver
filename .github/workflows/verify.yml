@@ -11,6 +11,7 @@ on:
       - 'youtube.js'
       - 'overview-analytics.js'
       - 'creator-studio.js'
+      - 'platform-hub.js'
       - 'auth-worker/**'
       - 'index.html'
       - 'tests/**'
@@ -38,6 +39,8 @@ jobs:
           node --check youtube.js
           node --check overview-analytics.js
           node --check creator-studio.js
+          node --check platform-hub.js
+          node --check tests/platform-hub.cjs
           node --check auth-worker/src/index.js
           node --check tests/oauth.cjs
           node --check tests/smoke.cjs
@@ -50,3 +53,5 @@ jobs:
         run: node tests/oauth.cjs
       - name: Test Creator Studio interface
         run: node tests/studio.cjs
+      - name: Test connected-only platform tabs
+        run: node tests/platform-hub.cjs
