@@ -33,7 +33,7 @@ Windows PowerShell (підтримувана команда):
 | Twitch | `TWITCH_CLIENT_ID`, `TWITCH_CLIENT_SECRET` | `https://viver-auth.flekideveloper.workers.dev/auth/callback/twitch` |
 | X (OAuth 2.0 Web App) | `X_CLIENT_ID`, `X_CLIENT_SECRET` | `https://viver-auth.flekideveloper.workers.dev/auth/callback/x` |
 
-- **Google:** у Google Cloud Console створи проєкт VIVER, налаштуй OAuth consent screen, увімкни YouTube Data API v3, створи клієнт типу *Web application*, додай redirect URI; scope `youtube.readonly` (read-only). Для деяких режимів і користувачів може знадобитися публікація / перевірка застосунку.
+- **Google:** у Google Cloud Console створи проєкт VIVER, налаштуй OAuth consent screen, увімкни YouTube Data API v3 **та YouTube Analytics API**, створи клієнт типу *Web application*, додай redirect URI. Scopes: `https://www.googleapis.com/auth/youtube.readonly` і `https://www.googleapis.com/auth/yt-analytics.readonly` (обидва read-only). У Google Auth Platform → Data Access додай ці дозволи. Для деяких режимів і користувачів може знадобитися публікація / перевірка застосунку.
 - **TikTok:** у TikTok for Developers створити застосунок і додати **Login Kit for Web**. Запитуваний scope `user.info.basic`. Публічне використання й додаткові scope можуть потребувати approval.
 - **Twitch:** у Twitch Developer Console створи Application, вибери confidential/server app і додай точний OAuth Redirect URL. Для базового профілю VIVER не запитує додаткові дозволи на чат чи стрім.
 - **X:** у Developer Console створи App, увімкни OAuth 2.0, Client Type Web App (confidential), додай Callback URL. Scopes: `users.read tweet.read offline.access`. API-доступ може бути платним; за потреби перевір чинні тарифи та обмеження.
@@ -66,3 +66,21 @@ node tests/oauth.cjs
 - https://developers.tiktok.com/docs/en/login-kit-web
 - https://dev.twitch.tv/docs/authentication/getting-tokens-oauth
 - https://docs.x.com/
+
+## Аналітика YouTube в Огляді
+
+Для метрик за останні 7 доступних днів VIVER використовує `GET /youtube/analytics` → YouTube Analytics API v2 `reports.query` (не лише Data API). Потрібно **увімкнути YouTube Analytics API** в Google Cloud → API Library, додати `yt-analytics.readonly` до Data Access і **повторно авторизувати** свій YouTube-канал у VIVER. Перепідключення того самого каналу не повинно стирати зібрані знімки Data API. Не передавай Client Secret та TOKEN_KEY в браузер чи GitHub.
+
+Огляд показує:
+- Повні 7 доступних звітних днів та порівняння з **попередніми 7 днями**, із точними датами. Google може обробляти останні дні із затримкою.
+- `views`, `likes`, `comments`, `shares`, `subscribersGained`, `subscribersLost`, різницю нових і втрачених, `estimatedMinutesWatched`.
+- Зміну (%) **нових підписок** і переглядів у порівнянні з попереднім тижнем. Якщо раніше було 0, результат у % не визначений і інтерфейс показує «—», а не нескінченний приріст.
+- Реальні `insightTrafficSourceType`, `insightTrafficSourceDetail` для `YT_SEARCH`, типи пристроїв і країни глядачів, якщо API повернув ці зрізи.
+- Окрему server-side D1 таблицю `youtube_analytics_cache` із приблизно 15-хвилинним кешем для економії квоти.
+
+Для інших платформ VIVER відображає статус підключення без фальшивих чисел; вони отримають живу аналітику після налаштування їхніх OAuth/API-підключень.
+
+Офіційні документи:
+- https://developers.google.com/youtube/analytics/reference/reports/query
+- https://developers.google.com/youtube/analytics/channel_reports
+- https://developers.google.com/youtube/analytics/dimensions
