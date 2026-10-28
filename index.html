@@ -7,9 +7,9 @@
 <meta name="description" content="VIVER — простір для ідей, планування контенту та нагадувань.">
 <title>VIVER</title>
 <link rel="icon" href="./favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="./style.css?v=3">
-<script defer src="./app.js?v=3"></script>
-<script defer src="./features.js?v=3"></script>
+<link rel="stylesheet" href="./style.css?v=4">
+<script defer src="./app.js?v=4"></script>
+<script defer src="./features.js?v=4"></script>
 </head>
 <body>
 <svg class="sprites" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
@@ -35,7 +35,8 @@
  <div class="nav-label" data-t="workspace">РОБОЧИЙ ПРОСТІР</div>
  <nav class="navigation">
   <button class="nav-item active" data-page="home" type="button"><svg><use href="#i-home"/></svg><span data-t="home">Огляд</span></button>
-  <button class="nav-item" data-page="planner" type="button"><svg><use href="#i-calendar"/></svg><span data-t="planner">Планер</span></button>
+  <button class="nav-item" data-page="planner" type="button"><svg><use href="#i-board"/></svg><span data-t="planner">Планер</span></button>
+  <button class="nav-item" data-page="calendar" type="button"><svg><use href="#i-calendar"/></svg><span data-t="calendar">Календар</span></button>
   <button class="nav-item" data-page="reminders" type="button"><svg><use href="#i-bell"/></svg><span data-t="reminders">Нагадування</span><span id="nav-reminder-count" class="nav-count" hidden></span></button>
   <button class="nav-item" data-page="board" type="button"><svg><use href="#i-board"/></svg><span data-t="board">Дошка ідей</span></button>
   <button class="nav-item" data-page="platforms" type="button"><svg><use href="#i-link"/></svg><span data-t="platforms">Платформи</span></button>
@@ -62,7 +63,7 @@
    </div>
   </section>
   <section class="page" id="page-planner">
-   <div class="page-title"><h1 data-t="planner">Планер</h1><div class="planner-header"><span id="plan-count" class="count"></span><div class="segmented" id="plan-modes"><button type="button" data-plan-mode="list" class="active" data-t="listMode">Список</button><button type="button" data-plan-mode="calendar" data-t="calendarMode">Календар</button><button type="button" data-plan-mode="board" data-t="kanbanMode">Етапи</button></div></div></div>
+   <div class="page-title"><h1 data-t="planner">Планер</h1><div class="planner-header"><span id="plan-count" class="count"></span><div class="segmented" id="plan-modes"><button type="button" data-plan-mode="list" class="active" data-t="listMode">Список</button><button type="button" data-plan-mode="board" data-t="kanbanMode">Етапи</button></div></div></div>
    <div class="workspace-grid">
     <div class="panel form-panel"><h2 id="plan-form-heading" data-t="newPost">Новий запис</h2>
      <form id="plan-form">
@@ -76,7 +77,20 @@
     </div>
     <div class="panel list-panel"><div class="panel-title"><h2 data-t="myContent">Мій контент</h2><select class="mini-select" id="plan-filter" aria-label="Фільтр"><option value="all" data-t="all">Усі</option><option value="idea" data-t="idea">Ідея</option><option value="draft" data-t="draft">У процесі</option><option value="script" data-t="script">Сценарій</option><option value="record" data-t="record">Запис</option><option value="edit" data-t="editing">Монтаж</option><option value="ready" data-t="ready">Готово</option><option value="published" data-t="published">Опубліковано</option></select></div><div id="plan-list" class="item-list"></div></div>
    </div>
-   <div class="panel planner-visual" id="planner-visual" hidden><div class="planner-visual-top"><div class="calendar-nav" id="calendar-nav"><button type="button" class="icon-button" id="calendar-prev" aria-label="Попередній">‹</button><strong id="calendar-month"></strong><button type="button" class="icon-button" id="calendar-next" aria-label="Наступний">›</button><button type="button" class="secondary-button" id="calendar-today" data-t="today">Сьогодні</button></div><button class="secondary-button" type="button" id="planner-new">+ <span data-t="newPost">Новий запис</span></button></div><div id="planner-visual-content"></div></div>
+   <div class="panel planner-visual" id="planner-visual" hidden><div class="planner-visual-top"><span class="visual-caption" data-t="dragStages">Перетягуй картки між етапами</span><button class="secondary-button" type="button" id="planner-new">+ <span data-t="newPost">Новий запис</span></button></div><div id="planner-visual-content"></div></div>
+  </section>
+  <section class="page" id="page-calendar">
+   <div class="page-title"><h1 data-t="calendar">Календар</h1><div class="calendar-top-actions"><button type="button" class="secondary-button" id="calendar-add-plan"><svg><use href="#i-plus"/></svg><span data-t="newPost">Новий запис</span></button></div></div>
+   <div class="calendar-page-layout">
+    <div class="panel calendar-page-panel">
+     <div class="calendar-nav" id="calendar-nav"><div class="calendar-month-steps"><button type="button" class="icon-button" id="calendar-prev" aria-label="Попередній місяць">‹</button><strong id="calendar-month"></strong><button type="button" class="icon-button" id="calendar-next" aria-label="Наступний місяць">›</button></div><button type="button" class="secondary-button" id="calendar-today" data-t="today">Сьогодні</button></div>
+     <div id="calendar-content"></div>
+    </div>
+    <aside class="panel calendar-agenda" aria-label="Події обраного дня">
+      <div class="agenda-head"><h2 id="calendar-selected-date"></h2><button type="button" class="icon-button" id="calendar-add-reminder" title="Нове нагадування" aria-label="Нове нагадування"><svg><use href="#i-plus"/></svg></button></div>
+      <div id="calendar-day-items" class="agenda-items"></div>
+    </aside>
+   </div>
   </section>
   <section class="page" id="page-reminders">
    <div class="page-title"><h1 data-t="reminders">Нагадування</h1><button type="button" class="secondary-button" id="enable-alerts"><svg><use href="#i-bell"/></svg><span data-t="alerts">Сповіщення</span></button></div>
@@ -132,7 +146,12 @@
   <section class="page" id="page-settings">
    <div class="page-title"><h1 data-t="settings">Налаштування</h1></div>
    <div class="settings-stack">
-    <div class="setting-row"><div><strong data-t="appearance">Вигляд</strong></div><div class="segmented" id="theme-buttons"><button data-theme-option="dark" class="active" type="button" data-t="dark">Темна</button><button data-theme-option="light" type="button" data-t="light">Світла</button></div></div>
+    <div class="setting-row theme-setting-row"><div><strong data-t="appearance">Вигляд</strong></div><div class="theme-grid" id="theme-buttons" role="group" aria-label="Тема оформлення">
+      <button type="button" class="theme-option active" data-theme-option="dark" aria-pressed="true"><span class="theme-preview preview-dark"><i></i><b></b></span><span data-t="dark">Темна</span></button>
+      <button type="button" class="theme-option" data-theme-option="light" aria-pressed="false"><span class="theme-preview preview-light"><i></i><b></b></span><span data-t="light">Світла</span></button>
+      <button type="button" class="theme-option" data-theme-option="gray" aria-pressed="false"><span class="theme-preview preview-gray"><i></i><b></b></span><span data-t="gray">Сіра</span></button>
+      <button type="button" class="theme-option" data-theme-option="cosmic" aria-pressed="false"><span class="theme-preview preview-cosmic"><i></i><b></b></span><span data-t="cosmic">Космічна</span></button>
+     </div></div>
     <div class="setting-row"><div><strong data-t="language">Мова</strong></div><select id="language" aria-label="Мова"><option value="uk">Українська</option><option value="en">English</option></select></div>
     <div class="setting-row"><div><strong data-t="backup">Резервна копія</strong></div><div class="row-buttons"><button type="button" class="secondary-button" id="export"><svg><use href="#i-download"/></svg><span data-t="export">Експорт</span></button><label class="secondary-button file-button" for="import"><svg><use href="#i-upload"/></svg><span data-t="import">Імпорт</span><input id="import" type="file" accept=".json,application/json" hidden></label></div></div>
     <div class="setting-row danger"><div><strong data-t="reset">Видалити локальні дані</strong></div><button type="button" class="danger-button" id="reset" data-t="delete">Видалити</button></div>
