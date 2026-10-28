@@ -143,7 +143,7 @@
   if(!catalog.videos?.length)return '<div class="studio-empty">'+t('Публічних відео поки немає.','No public videos yet.')+'</div>';
   const selected=catalog.videos.find(x=>x.id===selection)||null;
   return '<div class="studio-toolbar"><span>'+catalog.videos.length+' '+t('останніх публічних відео · офіційний API','recent public videos · official API')+'</span><span>'+day(catalog.updatedAt&&new Date(catalog.updatedAt).toISOString().slice(0,10))+'</span></div>'+
-   '<div class="studio-two-col"><div class="studio-video-list">'+catalog.videos.map(videoRow).join('')+'</div><div class="studio-video-detail">'+(selected?videoDetail(selected):
+   '<div class="studio-two-col"><div class="studio-video-list">'+catalog.videos.map(videoRow).join('')+(catalog.nextPageToken?'<button type="button" class="secondary-button studio-more" data-studio-more="1">'+t('Завантажити ще відео','Load more videos')+'</button>':'')+'</div><div class="studio-video-detail">'+(selected?videoDetail(selected):
    '<div class="studio-empty">'+t('Вибери відео, щоб побачити статистику та утримання.','Choose a video for its statistics and retention.')+'</div>')+'</div></div>';
  }
  function plannerTab(){
@@ -151,7 +151,7 @@
   const s=space(),plans=core.state.plans.filter(x=>x.platform==='youtube');
   const free=plans.filter(x=>x.status!=='published');
   return '<div class="studio-toolbar">'+t('Точний збіг назв публікацій синхронізується автоматично. Решту можна пов’язати вручну.','Exact published-title matches sync automatically. Link the rest manually.')+'</div>'+
-   '<div class="studio-published-list">'+catalog.videos.slice(0,35).map(v=>{
+   '<div class="studio-published-list">'+catalog.videos.map(v=>{
     const linkedPlan=plans.find(p=>p.id===s.links[v.id]);
     const choices=free.map(p=>'<option value="'+esc(p.id)+'">'+esc(p.title.slice(0,80))+'</option>').join('');
     return '<div class="studio-published-row"><div><strong>'+esc(v.title)+'</strong><small>'+day(v.publishedAt)+' · '+(linkedPlan?t('Пов’язано: ','Linked: ')+esc(linkedPlan.title):t('Немає зв’язку з планом','Not linked to a plan'))+'</small></div>'+
@@ -255,6 +255,19 @@
  root.addEventListener('click',async ev=>{
   const tabButton=ev.target.closest('[data-studio-tab]');
   if(tabButton){tab=tabButton.dataset.studioTab;render();if(tab==='goals')loadChannelStats();return}
+  const more=ev.target.closest('[data-studio-more]');
+  if(more&&catalog?.nextPageToken){
+   more.disabled=true;
+   try{
+    const page=await auth.request('/youtube/videos?cursor='+encodeURIComponent(catalog.nextPageToken));
+    if(page.channelId!==channel)return;
+    const used=new Set(catalog.videos.map(x=>x.id));
+    catalog.videos.push(...(page.videos||[]).filter(x=>!used.has(x.id)));
+    catalog.nextPageToken=page.nextPageToken||null;
+    syncPublished();
+   }catch{toast('Не вдалося завантажити інші відео','Could not load more videos')}
+   render();return;
+  }
   const videoButton=ev.target.closest('[data-studio-video]');
   if(videoButton){selection=videoButton.dataset.studioVideo;retention=null;render();return}
   const ret=ev.target.closest('[data-studio-retention]');
