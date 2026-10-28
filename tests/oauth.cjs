@@ -5,20 +5,22 @@ const fs=require('node:fs');
 const vm=require('node:vm');
 const {webcrypto}=require('node:crypto');
 const source=fs.readFileSync(require('node:path').join(__dirname,'../auth-worker/src/index.js'),'utf8');
-const pending=new Map(),accounts=new Map(),youtubeCache=new Map(),snapshots=new Map(),analyticsCache=new Map(),videoCache=new Map();
+const pending=new Map(),accounts=new Map(),youtubeCache=new Map(),snapshots=new Map(),analyticsCache=new Map(),videoCache=new Map(),socialCache=new Map(),socialHistory=new Map();
 const DB={
  prepare(sql){const entry={sql,values:[],bind(...args){this.values=args;return this},
   async first(){
    const [a,b]=this.values;
    if(sql.includes('COUNT(*)'))return {total:[...pending.values()].filter(v=>v.client_hash===a).length};
    if(sql.includes('FROM oauth_pending'))return pending.get(a)&&pending.get(a).provider===b?pending.get(a):null;
+   if(sql.includes('FROM social_overview_cache'))return socialCache.get(a+'|'+b)||null;
    if(sql.includes('FROM youtube_video_cache'))return videoCache.get(a)||null;
    if(sql.includes('FROM youtube_analytics_cache'))return analyticsCache.get(a)||null;
    if(sql.includes('FROM youtube_cache'))return youtubeCache.get(a)||null;
    if(sql.includes('FROM oauth_accounts'))return accounts.get(a+'|'+b)||null;
    return null
   },
-  async all(){const [h,id]=this.values;if(sql.includes('youtube_snapshots'))return {results:[...snapshots.values()].filter(x=>x.client_hash===h&&x.channel_id===id).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,60)};
+  async all(){const [h,id,subject]=this.values;if(sql.includes('social_metric_snapshots'))return {results:[...socialHistory.values()].filter(x=>x.client_hash===h&&x.provider===id&&x.subject===subject).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,45)};
+   if(sql.includes('youtube_snapshots'))return {results:[...snapshots.values()].filter(x=>x.client_hash===h&&x.channel_id===id).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,60)};
    return {results:[...accounts.values()].filter(v=>v.client_hash===h)}},
   async run(){
    const v=this.values;
@@ -26,10 +28,14 @@ const DB={
    if(sql.includes('INSERT INTO oauth_pending'))pending.set(v[0],{state:v[0],client_hash:v[1],provider:v[2],verifier:v[3],created_at:v[4]});
    if(sql.includes('DELETE FROM oauth_pending WHERE state'))pending.delete(v[0]);
    if(sql.includes('INSERT INTO oauth_accounts'))accounts.set(v[0]+'|'+v[1],{client_hash:v[0],provider:v[1],subject:v[2],label:v[3],avatar:v[4],token_enc:v[5],refresh_enc:v[6],expires_at:v[7],updated_at:v[8]});
+   if(sql.includes('INSERT INTO social_overview_cache'))socialCache.set(v[0]+'|'+v[1],{client_hash:v[0],provider:v[1],subject:v[2],payload:v[3],updated_at:v[4]});
+   if(sql.includes('INSERT INTO social_metric_snapshots'))socialHistory.set(v[0]+'|'+v[1]+'|'+v[2]+'|'+v[3],{client_hash:v[0],provider:v[1],subject:v[2],date:v[3],metrics:v[4],updated_at:v[5]});
    if(sql.includes('INSERT INTO youtube_video_cache'))videoCache.set(v[0],{client_hash:v[0],channel_id:v[1],payload:v[2],updated_at:v[3]});
    if(sql.includes('INSERT INTO youtube_analytics_cache'))analyticsCache.set(v[0],{client_hash:v[0],channel_id:v[1],payload:v[2],updated_at:v[3]});
    if(sql.includes('INSERT INTO youtube_cache'))youtubeCache.set(v[0],{client_hash:v[0],channel_id:v[1],payload:v[2],updated_at:v[3]});
    if(sql.includes('INSERT INTO youtube_snapshots'))snapshots.set(v[0]+'|'+v[1]+'|'+v[2],{client_hash:v[0],channel_id:v[1],date:v[2],view_count:v[3],subscriber_count:v[4],video_count:v[5],recorded_at:v[6]});
+   if(sql.includes('DELETE FROM social_overview_cache'))socialCache.delete(v[0]+'|'+v[1]);
+   if(sql.includes('DELETE FROM social_metric_snapshots')){for(const [k,row] of socialHistory){if(row.client_hash===v[0]&&row.provider===v[1])socialHistory.delete(k)}}
    if(sql.includes('DELETE FROM youtube_video_cache'))videoCache.delete(v[0]);
    if(sql.includes('DELETE FROM youtube_analytics_cache'))analyticsCache.delete(v[0]);
    if(sql.includes('DELETE FROM youtube_cache'))youtubeCache.delete(v[0]);
@@ -64,6 +70,29 @@ const mockFetch=async(url,opts)=>{
   if(dim==='deviceType')return Response.json(toObj([dim,'views'],[['MOBILE',900],['DESKTOP',500]]));
   if(dim==='country')return Response.json(toObj([dim,'views'],[['UA',900],['PL',500]]));
  }
+
+ if(String(url).includes('id.twitch.tv/oauth2/token')||String(url).includes('open.tiktokapis.com/v2/oauth/token/')||String(url).includes('api.x.com/2/oauth2/token'))
+  return Response.json({access_token:'social-test-access',refresh_token:'social-test-refresh',expires_in:3600});
+ if(String(url).includes('api.twitch.tv/helix/users'))
+  return Response.json({data:[{id:'twitch-42',display_name:'Twitch Creator',login:'twitchcreator',profile_image_url:'https://example.com/ava.jpg'}]});
+ if(String(url).includes('api.twitch.tv/helix/channels/followers'))
+  return Response.json({total:126,data:[]});
+ if(String(url).includes('api.twitch.tv/helix/streams?'))
+  return Response.json({data:[{title:'Playing a game',viewer_count:19,game_name:'Fortnite',started_at:'2026-10-28T19:00:00Z'}]});
+ if(String(url).includes('api.twitch.tv/helix/videos?'))
+  return Response.json({data:[{id:'test-vod',title:'Last broadcast',view_count:220,created_at:'2026-10-27T20:00:00Z',url:'https://www.twitch.tv/videos/123456'}]});
+ if(String(url).includes('api.twitch.tv/helix/clips?'))
+  return Response.json({data:[{id:'clip-1',title:'Cool clip',view_count:50,created_at:'2026-10-27T11:00:00Z',url:'https://clips.twitch.tv/Testing'}]});
+ if(String(url).includes('api.twitch.tv/helix/channels?'))
+  return Response.json({data:[{title:'Test Twitch Channel',game_name:'Fortnite'}]});
+ if(String(url).includes('open.tiktokapis.com/v2/user/info/'))
+  return Response.json({data:{user:{open_id:'tiktok-31',display_name:'TikTok Creator',username:'ttcreator',avatar_url:'https://example.com/tt.jpg',follower_count:404,following_count:22,likes_count:1900,video_count:10}},error:{code:'ok'}});
+ if(String(url).includes('open.tiktokapis.com/v2/video/list/'))
+  return Response.json({data:{videos:[{id:'tt111',title:'New TikTok',create_time:1793116800,view_count:900,like_count:45,comment_count:8,share_count:5,share_url:'https://www.tiktok.com/@ttcreator/video/123'}]},error:{code:'ok'}});
+ if(String(url).includes('api.x.com/2/users/me'))
+  return Response.json({data:{id:'x-456',name:'X Creator',username:'xcreator',profile_image_url:'https://example.com/x.jpg',public_metrics:{followers_count:83,following_count:13,tweet_count:21}}});
+ if(String(url).includes('api.x.com/2/users/x-456/tweets'))
+  return Response.json({data:[{id:'2233',author_id:'x-456',text:'My own post',created_at:'2026-10-27T12:00:00Z',public_metrics:{like_count:10,retweet_count:2,reply_count:1,impression_count:800}}]});
  if(String(url).includes('oauth2.googleapis.com/token'))return Response.json({access_token:'secret-access-token',refresh_token:'secret-refresh-token',expires_in:3600});
  if(String(url).includes('youtube/v3/channels'))return Response.json({items:[{id:'test-channel',snippet:{title:'Creator Test',description:'Test channel',thumbnails:{default:{url:'https://example.com/avatar.jpg'}}},statistics:{viewCount:'15200',subscriberCount:'789',videoCount:'12',hiddenSubscriberCount:false},contentDetails:{relatedPlaylists:{uploads:'UUTESTUPLOADS'}}}]});
  if(String(url).includes('youtube/v3/playlistItems')){
@@ -191,6 +220,34 @@ const req=(path,method='GET',origin='https://flekideveloper.github.io',token=key
  assert.equal(youtubeCache.size,0,'disconnect erases channel cache');
  assert.equal(snapshots.size,0,'disconnect erases snapshots');
  assert.equal((await worker.fetch(req('/youtube/stats'),env)).status,404,'unlinked user cannot see channel metrics');
+
+ // Each network only becomes queryable after its own verified provider callback.
+ for(const provider of ['twitch','tiktok','x']){
+  assert.equal((await worker.fetch(req('/social/'+provider+'/overview'),env)).status,404,'social endpoint denies disconnected '+provider);
+  const state=[...pending.values()].find(p=>p.provider===provider)?.state;
+  assert(state,'OAuth authorization state exists for '+provider);
+  const linked=await worker.fetch(req('/auth/callback/'+provider+'?code=dummy-code&state='+state),env);
+  assert.equal(linked.status,200,'official provider flow links '+provider);
+  assert.equal((await worker.fetch(req('/social/'+provider+'/overview','GET','https://evil.example'),env)).status,403,'origin enforced for '+provider);
+  assert.equal((await worker.fetch(req('/social/'+provider+'/overview','GET','https://flekideveloper.github.io','invalid'),env)).status,401,'capability enforced for '+provider);
+  const insight=await (await worker.fetch(req('/social/'+provider+'/overview'),env)).json();
+  assert.equal(insight.provider,provider);
+  assert(insight.account?.id,'profile is verified');
+  assert.equal(insight.history.length,1,'first observed daily snapshot');
+  assert(!JSON.stringify(insight).includes('social-test-access'),'no OAuth access tokens leaked');
+  assert.equal((await (await worker.fetch(req('/social/'+provider+'/overview'),env)).json()).fromCache,true,'separate server cache for '+provider);
+  if(provider==='twitch'){assert.equal(insight.metrics.followers,126);assert.equal(insight.live.viewers,19);assert.equal(insight.content[0].kind,'vod')}
+  if(provider==='tiktok'){assert.equal(insight.metrics.followers,404);assert.equal(insight.metrics.likes,1900);assert.equal(insight.content[0].views,900)}
+  if(provider==='x'){assert.equal(insight.metrics.followers,83);assert.equal(insight.content[0].views,800)}
+ }
+ assert.equal(socialCache.size,3,'three isolated social caches');
+ for(const provider of ['twitch','tiktok','x']){
+  assert.equal((await worker.fetch(req('/connections/'+provider,'DELETE'),env)).status,200);
+  assert.equal((await worker.fetch(req('/social/'+provider+'/overview'),env)).status,404,'disconnected '+provider+' never exposes data');
+ }
+ assert.equal(socialCache.size,0,'unlink clears all social caches');
+ assert.equal(socialHistory.size,0,'unlink clears social snapshots');
+
  assert.equal(accounts.size,0,'disconnect clears encrypted tokens');
  console.log('VIVER OAuth tests: PASS — OAuth, PKCE, encrypted tokens, live YouTube metrics, cache, history, no token leaks, disconnect');
 })().catch(e=>{console.error(e);process.exit(1)});
