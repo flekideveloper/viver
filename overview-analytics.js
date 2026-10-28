@@ -101,7 +101,7 @@
  function renderOther(connection){
   const p=providers.find(x=>x.id===connection.provider);
   if(!p)return '';
-  return '<div class="creator-pending-platform"><span class="creator-brand creator-brand-'+p.id+'">'+esc(p.glyph)+'</span><div><strong>'+esc(p.name)+'</strong><small>'+esc(connection.label||'')+'</small><p>'+t('Акаунт підключено, але автоматичні показники для цієї мережі поки не реалізовані.','Connected, but automated metrics are not available for this network yet.')+'</p></div></div>';
+  return '<button class="creator-pending-platform creator-provider-jump" type="button" data-creator-open-provider="'+p.id+'"><span class="creator-brand creator-brand-'+p.id+'">'+esc(p.glyph)+'</span><span class="creator-provider-short"><strong>'+esc(p.name)+'</strong><small>'+esc(connection.label||'')+'</small><span>'+t('Переглянути аналітику та інструменти ↗','Open analytics and creator tools ↗')+'</span></span></button>';
  }
  function render(){
   $('#creator-overview-title').textContent=t('Аналітика соцмереж','Social analytics');
@@ -139,8 +139,9 @@
   if(yt&&$('#page-home')?.classList.contains('active'))load();
  }
  root.addEventListener('click',ev=>{
-  if(ev.target.closest('[data-creator-open-platforms]'))window.location.hash='#platforms';
-  if(ev.target.closest('[data-creator-open-platforms]'))window.location.hash='#platforms';
+  if(ev.target.closest('[data-creator-open-platforms]'))window.VIVERCore?.nav?.('platforms');
+  const provider=ev.target.closest('[data-creator-open-provider]');
+  if(provider){window.VIVERCore?.nav?.('platforms');window.VIVERPlatformHub?.select?.(provider.dataset.creatorOpenProvider);return}
   if(ev.target.closest('[data-creator-reauthorize]'))client.start('youtube');
  });
  button.addEventListener('click',()=>{if(connected().some(x=>x.provider==='youtube'))load(true);else client.refresh()});
