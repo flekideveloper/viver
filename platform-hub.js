@@ -251,6 +251,7 @@
  function sync(){
   const list=connections();
   if(!list.some(x=>x.provider===selected)){serial++;data=null;error='';knownKey='';loading=false;lastUpdate=0;selected=list[0]?.provider||'youtube'}
+  if(active()&&selected!=='youtube'&&knownKey&&knownKey!==selected+':'+active().label){serial++;data=null;error='';knownKey='';loading=false;lastUpdate=0}
   renderHub();
   if(selected!=='youtube'&&list.length&&core?.page==='platforms')fetchSelected();
  }
@@ -273,7 +274,7 @@
   if(ev.target.closest('[data-social-read]')){const s=local();for(const a of s.alerts)a.read=true;store();renderSocial();return}
   const open=ev.target.closest('[data-social-open-plan]');if(open){planOpen(open.dataset.socialOpenPlan);return}
   const link=ev.target.closest('[data-social-link]');
-  if(link){const select=$('[data-social-link-select="'+CSS.escape(link.dataset.socialLink)+'"]');if(select?.value)connectPlan(link.dataset.socialLink,select.value);return}
+  if(link){const select=[...social.querySelectorAll('[data-social-link-select]')].find(x=>x.dataset.socialLinkSelect===link.dataset.socialLink);if(select?.value)connectPlan(link.dataset.socialLink,select.value);return}
   const add=ev.target.closest('[data-social-import]');
   if(add){
    const item=data?.content?.find(x=>x.id===add.dataset.socialImport),s=local();
