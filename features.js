@@ -55,6 +55,28 @@ function renderVisual(){
  if(planMode==='board')renderKanban();
 }
 const weekNames=()=>L()==='uk'?['Пн','Вт','Ср','Чт','Пт','Сб','Нд']:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+function reminderAppearsOnDate(r,date){
+ if(r.done||!r.due||date<r.due.slice(0,10))return false;
+ if(date===r.due.slice(0,10))return true;
+ if(!r.repeat||r.repeat==='none')return false;
+ const dateParts=date.split('-').map(Number),dueParts=r.due.slice(0,10).split('-').map(Number);
+ const day=new Date(dateParts[0],dateParts[1]-1,dateParts[2],12);
+ if(r.repeat==='daily')return true;
+ if(r.repeat==='weekdays')return Array.isArray(r.weekdays)&&r.weekdays.includes(day.getDay());
+ if(r.repeat==='monthly'){
+  const last=new Date(dateParts[0],dateParts[1],0).getDate();
+  return dateParts[2]===Math.min(r.anchorDay||dueParts[2],last);
+ }
+ if(r.repeat==='weekly'){
+  const a=Date.UTC(...[dueParts[0],dueParts[1]-1,dueParts[2]]);
+  const b=Date.UTC(...[dateParts[0],dateParts[1]-1,dateParts[2]]);
+  return (b-a)%(7*86400000)===0;
+ }
+ return false;
+}
+const remindersOnDate=date=>S().reminders.filter(r=>reminderAppearsOnDate(r,date));
+
 function renderCalendar(){
  const month=calendarMonth.getMonth(),year=calendarMonth.getFullYear();
  $('#calendar-month').textContent=calendarMonth.toLocaleDateString(L()==='uk'?'uk-UA':'en-US',{month:'long',year:'numeric'});
@@ -66,10 +88,10 @@ function renderCalendar(){
   const day=new Date(first);day.setDate(first.getDate()+i);
   const k=keyOf(day),current=day.getMonth()===month,today=k===keyOf(new Date()),selected=k===selectedDay;
   const plans=S().plans.filter(p=>p.date.slice(0,10)===k);
-  const reminders=S().reminders.filter(r=>!r.done&&r.due.slice(0,10)===k);
+  const reminders=remindersOnDate(k);
   const entries=[
    ...plans.slice(0,3).map(p=>'<button draggable="true" data-calendar-plan="'+E(p.id)+'" class="calendar-event" title="'+E(p.title)+'">'+E(p.title)+'</button>'),
-   ...reminders.slice(0,Math.max(0,3-plans.length)).map(r=>'<button data-calendar-reminder="'+E(r.id)+'" class="calendar-event reminder-event" title="'+E(r.title)+'">◦ '+E(r.title)+'</button>')
+   ...reminders.slice(0,Math.max(0,3-plans.length)).map(r=>'<button data-calendar-reminder="'+E(r.id)+'" class="calendar-event reminder-event" title="'+E(r.title)+'">'+(r.repeat&&r.repeat!=='none'?'↻ ':'• ')+E(r.title)+'</button>')
   ].join('');
   const more=plans.length+reminders.length-3;
   dayCells.push('<div class="calendar-cell '+(current?'':'outside ')+(today?'today ':'')+(selected?'selected':'')+'" data-calendar-day="'+k+'"><button type="button" class="calendar-date" data-calendar-select="'+k+'" aria-label="'+k+'">'+day.getDate()+'</button><div class="day-events">'+entries+(more>0?'<small>+'+more+'</small>':'')+'</div></div>');
@@ -81,10 +103,10 @@ function renderAgenda(){
  const d=new Date(selectedDay+'T12:00:00');
  $('#calendar-selected-date').textContent=d.toLocaleDateString(L()==='uk'?'uk-UA':'en-US',{weekday:'long',day:'numeric',month:'long'});
  const plans=S().plans.filter(p=>p.date.slice(0,10)===selectedDay).sort((a,b)=>a.date.localeCompare(b.date));
- const reminders=S().reminders.filter(r=>!r.done&&r.due.slice(0,10)===selectedDay).sort((a,b)=>a.due.localeCompare(b.due));
+ const reminders=remindersOnDate(selectedDay).sort((a,b)=>a.due.localeCompare(b.due));
  const rows=[
   ...plans.map(p=>({id:p.id,kind:'plan',date:p.date,title:p.title,tag:stageName(p.status)})),
-  ...reminders.map(r=>({id:r.id,kind:'reminder',date:r.due,title:r.title,tag:msg('Нагадування','Reminder')}))
+  ...reminders.map(r=>({id:r.id,kind:'reminder',date:selectedDay+r.due.slice(10),title:r.title,tag:(r.repeat&&r.repeat!=='none'?'↻ ':'')+msg('Нагадування','Reminder')}))
  ].sort((a,b)=>a.date.localeCompare(b.date));
  $('#calendar-day-items').innerHTML=rows.length?rows.map(x=>'<button type="button" class="agenda-row" data-agenda-'+x.kind+'="'+E(x.id)+'"><span class="agenda-time">'+E(x.date.slice(11,16))+'</span><span class="agenda-body"><strong>'+E(x.title)+'</strong><small>'+E(x.tag)+'</small></span><span class="agenda-chevron">›</span></button>').join(''):'<p class="agenda-empty">'+msg('На цей день нічого немає.','Nothing planned for this day.')+'</p>';
 }
