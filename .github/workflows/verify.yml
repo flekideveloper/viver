@@ -9,6 +9,7 @@ on:
       - 'features.js'
       - 'connections.js'
       - 'youtube.js'
+      - 'overview-analytics.js'
       - 'auth-worker/**'
       - 'index.html'
       - 'tests/**'
@@ -34,6 +35,7 @@ jobs:
           node --check features.js
           node --check connections.js
           node --check youtube.js
+          node --check overview-analytics.js
           node --check auth-worker/src/index.js
           node --check tests/oauth.cjs
           node --check tests/smoke.cjs
