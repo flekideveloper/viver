@@ -7,25 +7,44 @@ const S=()=>c.state,E=s=>c.esc(s),save=()=>c.save(),toast=s=>c.toast(s),L=()=>S(
 const msg=(uk,en)=>L()==='uk'?uk:en;
 const stages=['idea','script','record','edit','ready','published'];
 const stageName=s=>({idea:msg('Ідея','Idea'),draft:msg('У процесі','In progress'),script:msg('Сценарій','Script'),record:msg('Запис','Recording'),edit:msg('Монтаж','Editing'),ready:msg('Готово','Ready'),published:msg('Опубліковано','Published')})[s]||s;
-let planMode='list',calendarMonth=new Date(),expandedChecks=new Set(),connecting='',selectedGroup='all',pendingImage='';
+let planMode='list',calendarMonth=new Date(),selectedDay=keyOf(new Date()),expandedChecks=new Set(),connecting='',selectedGroup='all',pendingImage='';
 calendarMonth.setDate(1);calendarMonth.setHours(12,0,0,0);
 const keyOf=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 const asInput=d=>new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16);
 function setMode(mode){
- if(!['list','calendar','board'].includes(mode))mode='list';planMode=mode;
- $$('#plan-modes button').forEach(b=>b.classList.toggle('active',b.dataset.planMode===mode));
+ if(!['list','board'].includes(mode))mode='list';planMode=mode;
+ $('#plan-modes button').forEach(b=>b.classList.toggle('active',b.dataset.planMode===mode));
  const list=mode==='list';$('#page-planner .workspace-grid').hidden=!list;
- $('#planner-visual').hidden=list;$('#calendar-nav').hidden=mode!=='calendar';
+ $('#planner-visual').hidden=list;
  if(!list)renderVisual();
 }
 $('#plan-modes').addEventListener('click',ev=>{const b=ev.target.closest('[data-plan-mode]');if(b)setMode(b.dataset.planMode)});
-$('#calendar-prev').addEventListener('click',()=>{calendarMonth.setMonth(calendarMonth.getMonth()-1);renderVisual()});
-$('#calendar-next').addEventListener('click',()=>{calendarMonth.setMonth(calendarMonth.getMonth()+1);renderVisual()});
-$('#calendar-today').addEventListener('click',()=>{calendarMonth=new Date();calendarMonth.setDate(1);renderVisual()});
+function changeMonth(direction){
+ calendarMonth.setDate(1);calendarMonth.setMonth(calendarMonth.getMonth()+direction);
+ selectedDay=keyOf(new Date(calendarMonth.getFullYear(),calendarMonth.getMonth(),1));
+ renderCalendar();
+}
+$('#calendar-prev').addEventListener('click',()=>changeMonth(-1));
+$('#calendar-next').addEventListener('click',()=>changeMonth(1));
+$('#calendar-today').addEventListener('click',()=>{calendarMonth=new Date();calendarMonth.setDate(1);selectedDay=keyOf(new Date());renderCalendar()});
 $('#planner-new').addEventListener('click',()=>{setMode('list');$('#plan-title').focus()});
+function createForDay(type,day=selectedDay){
+ c.nav(type==='reminder'?'reminders':'planner');
+ if(type==='reminder'){
+  $('#reminder-cancel').click();
+  $('#reminder-due').value=day+'T18:00';
+  $('#reminder-title').focus();
+ }else{
+  setMode('list');$('#plan-cancel').click();
+  $('#plan-date').value=day+'T18:00';
+  $('#plan-title').focus();
+ }
+}
+$('#calendar-add-plan').addEventListener('click',()=>createForDay('plan'));
+$('#calendar-add-reminder').addEventListener('click',()=>createForDay('reminder'));
 const plan=x=>S().plans.find(p=>p.id===x);
 function openPlan(id){
- setMode('list');
+ c.nav('planner');setMode('list');
  $('#plan-filter').value='all';expandedChecks.add(id);
  c.renderPlans();
  const edit=$$('#plan-list [data-plan-edit]').find(x=>x.dataset.planEdit===id);
@@ -33,8 +52,7 @@ function openPlan(id){
  $('#plan-title').scrollIntoView({behavior:'smooth',block:'center'});
 }
 function renderVisual(){
- if(planMode==='list')return;
- if(planMode==='calendar')renderCalendar();else renderKanban();
+ if(planMode==='board')renderKanban();
 }
 const weekNames=()=>L()==='uk'?['Пн','Вт','Ср','Чт','Пт','Сб','Нд']:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 function renderCalendar(){
@@ -46,7 +64,7 @@ function renderCalendar(){
  const dayCount=Math.ceil((offset+new Date(year,month+1,0).getDate())/7)*7;
  for(let i=0;i<dayCount;i++){
   const day=new Date(first);day.setDate(first.getDate()+i);
-  const k=keyOf(day),current=day.getMonth()===month,today=k===keyOf(new Date());
+  const k=keyOf(day),current=day.getMonth()===month,today=k===keyOf(new Date()),selected=k===selectedDay;
   const plans=S().plans.filter(p=>p.date.slice(0,10)===k);
   const reminders=S().reminders.filter(r=>!r.done&&r.due.slice(0,10)===k);
   const entries=[
@@ -54,10 +72,27 @@ function renderCalendar(){
    ...reminders.slice(0,Math.max(0,3-plans.length)).map(r=>'<button data-calendar-reminder="'+E(r.id)+'" class="calendar-event reminder-event" title="'+E(r.title)+'">◦ '+E(r.title)+'</button>')
   ].join('');
   const more=plans.length+reminders.length-3;
-  dayCells.push('<div class="calendar-cell '+(current?'':'outside ')+(today?'today':'')+'" data-calendar-day="'+k+'"><button type="button" class="calendar-date" data-calendar-new="'+k+'" aria-label="'+k+'">'+day.getDate()+'</button><div class="day-events">'+entries+(more>0?'<small>+'+more+'</small>':'')+'</div></div>');
+  dayCells.push('<div class="calendar-cell '+(current?'':'outside ')+(today?'today ':'')+(selected?'selected':'')+'" data-calendar-day="'+k+'"><button type="button" class="calendar-date" data-calendar-select="'+k+'" aria-label="'+k+'">'+day.getDate()+'</button><div class="day-events">'+entries+(more>0?'<small>+'+more+'</small>':'')+'</div></div>');
  }
- $('#planner-visual-content').innerHTML='<div class="calendar-grid">'+weekNames().map(n=>'<div class="calendar-weekday">'+n+'</div>').join('')+dayCells.join('')+'</div>';
+ $('#calendar-content').innerHTML='<div class="calendar-grid">'+weekNames().map(n=>'<div class="calendar-weekday">'+n+'</div>').join('')+dayCells.join('')+'</div>';
+ renderAgenda();
 }
+function renderAgenda(){
+ const d=new Date(selectedDay+'T12:00:00');
+ $('#calendar-selected-date').textContent=d.toLocaleDateString(L()==='uk'?'uk-UA':'en-US',{weekday:'long',day:'numeric',month:'long'});
+ const plans=S().plans.filter(p=>p.date.slice(0,10)===selectedDay).sort((a,b)=>a.date.localeCompare(b.date));
+ const reminders=S().reminders.filter(r=>!r.done&&r.due.slice(0,10)===selectedDay).sort((a,b)=>a.due.localeCompare(b.due));
+ const rows=[
+  ...plans.map(p=>({id:p.id,kind:'plan',date:p.date,title:p.title,tag:stageName(p.status)})),
+  ...reminders.map(r=>({id:r.id,kind:'reminder',date:r.due,title:r.title,tag:msg('Нагадування','Reminder')}))
+ ].sort((a,b)=>a.date.localeCompare(b.date));
+ $('#calendar-day-items').innerHTML=rows.length?rows.map(x=>'<button type="button" class="agenda-row" data-agenda-'+x.kind+'="'+E(x.id)+'"><span class="agenda-time">'+E(x.date.slice(11,16))+'</span><span class="agenda-body"><strong>'+E(x.title)+'</strong><small>'+E(x.tag)+'</small></span><span class="agenda-chevron">›</span></button>').join(''):'<p class="agenda-empty">'+msg('На цей день нічого немає.','На цей день нічого немає.').replace('На цей день нічого немає.',L()==='uk'?'На цей день нічого немає.':'Nothing planned for this day.')+'</p>';
+}
+$('#calendar-day-items').addEventListener('click',ev=>{
+ const planBtn=ev.target.closest('[data-agenda-plan]');if(planBtn){openPlan(planBtn.dataset.agendaPlan);return}
+ const remBtn=ev.target.closest('[data-agenda-reminder]');
+ if(remBtn){c.nav('reminders');const edit=$('#reminder-list [data-reminder-edit]').find(b=>b.dataset.reminderEdit===remBtn.dataset.agendaReminder);edit?.click()}
+});
 function renderKanban(){
  const columns=stages.map(stage=>{
   const items=S().plans.filter(p=>p.status===stage||(stage==='script'&&p.status==='draft')).sort((a,b)=>new Date(a.date)-new Date(b.date));
@@ -68,31 +103,44 @@ function renderKanban(){
  }).join('');
  $('#planner-visual-content').innerHTML='<div class="kanban-board">'+columns+'</div>';
 }
-$('#planner-visual-content').addEventListener('click',ev=>{
+function handleContentClick(ev){
  const p=ev.target.closest('[data-kanban-plan],[data-calendar-plan]');
  if(p){openPlan(p.dataset.kanbanPlan||p.dataset.calendarPlan);return}
- const r=ev.target.closest('[data-calendar-reminder]');
- if(r){c.nav('reminders');const edit=$$('#reminder-list [data-reminder-edit]').find(b=>b.dataset.reminderEdit===r.dataset.calendarReminder);edit?.click();return}
- const day=ev.target.closest('[data-calendar-new]');
- if(day){setMode('list');$('#plan-date').value=day.dataset.calendarNew+'T18:00';$('#plan-title').focus()}
-});
-$('#planner-visual-content').addEventListener('dragstart',ev=>{
- const el=ev.target.closest('[data-kanban-plan],[data-calendar-plan]');
- if(!el)return;
- ev.dataTransfer.effectAllowed='move';ev.dataTransfer.setData('text/plain',el.dataset.kanbanPlan||el.dataset.calendarPlan);
-});
-$('#planner-visual-content').addEventListener('dragover',ev=>{
- const col=ev.target.closest('[data-kanban-column]'),cell=ev.target.closest('[data-calendar-day]');
- if(col||cell){ev.preventDefault();ev.dataTransfer.dropEffect='move'}
-});
-$('#planner-visual-content').addEventListener('drop',ev=>{
+ const rem=ev.target.closest('[data-calendar-reminder]');
+ if(rem){c.nav('reminders');const edit=$$('#reminder-list [data-reminder-edit]').find(b=>b.dataset.reminderEdit===rem.dataset.calendarReminder);edit?.click();return}
+ const day=ev.target.closest('[data-calendar-select],[data-calendar-day]');
+ if(day){
+  const date=day.dataset.calendarSelect||day.dataset.calendarDay;
+  if(!date)return;
+  selectedDay=date;
+  const selected=new Date(date+'T12:00:00');
+  if(calendarMonth.getMonth()!==selected.getMonth()||calendarMonth.getFullYear()!==selected.getFullYear())calendarMonth=new Date(selected.getFullYear(),selected.getMonth(),1);
+  renderCalendar();
+ }
+}
+function handleDragStart(ev){
+ const item=ev.target.closest('[data-kanban-plan],[data-calendar-plan]');if(!item)return;
+ ev.dataTransfer.effectAllowed='move';ev.dataTransfer.setData('text/plain',item.dataset.kanbanPlan||item.dataset.calendarPlan);
+}
+function handleDragOver(ev){
+ if(ev.target.closest('[data-kanban-column],[data-calendar-day]')){ev.preventDefault();ev.dataTransfer.dropEffect='move'}
+}
+function handleDrop(ev){
  const col=ev.target.closest('[data-kanban-column]'),cell=ev.target.closest('[data-calendar-day]');
  if(!col&&!cell)return;ev.preventDefault();
  const id=ev.dataTransfer.getData('text/plain'),p=plan(id);if(!p)return;
  if(col)p.status=col.dataset.kanbanColumn;
  else if(cell)p.date=cell.dataset.calendarDay+p.date.slice(10);
- save();c.renderPlans();c.renderHome();renderVisual();toast(msg('План оновлено','Plan updated'));
-});
+ if(!save())return;
+ c.renderPlans();c.renderHome();renderCalendar();toast(msg('План оновлено','Plan updated'));
+}
+for(const selector of ['#planner-visual-content','#calendar-content']){
+ const root=$(selector);
+ root.addEventListener('click',handleContentClick);
+ root.addEventListener('dragstart',handleDragStart);
+ root.addEventListener('dragover',handleDragOver);
+ root.addEventListener('drop',handleDrop);
+}
 function checklistHTML(p){
  const checks=p.checks||[],done=checks.filter(ch=>ch.done).length,opened=expandedChecks.has(p.id);
  return '<div class="checklist-wrap"><button class="checklist-toggle" type="button" data-check-open="'+E(p.id)+'">'+(checks.length?'☑ '+done+'/'+checks.length:msg('+ Завдання','+ Tasks'))+'</button>'+(opened?'<div class="checklist-editor">'+checks.map(ch=>'<div class="check-item"><label><input type="checkbox" data-check-toggle="'+E(p.id)+'" data-check-id="'+E(ch.id)+'" '+(ch.done?'checked':'')+'><span class="'+(ch.done?'complete':'')+'">'+E(ch.text)+'</span></label><button type="button" aria-label="Delete task" data-check-del="'+E(p.id)+'" data-check-id="'+E(ch.id)+'">×</button></div>').join('')+'<form class="check-add" data-check-form="'+E(p.id)+'"><input required name="task" maxlength="120" placeholder="'+msg('Нове завдання…','New task…')+'"><button type="submit">+</button></form></div>':'')+'</div>';
@@ -105,6 +153,7 @@ function onPlansRendered(){
   const wrapper=document.createElement('div');wrapper.className='checklist-host';wrapper.innerHTML=checklistHTML(p);el.append(wrapper);
  });
  renderVisual();
+ if(c.page==='calendar')renderCalendar();
 }
 $('#plan-list').addEventListener('click',ev=>{
  const btn=ev.target.closest('[data-check-open],[data-check-del]');if(!btn)return;
@@ -341,13 +390,13 @@ $('#analytics-clear').addEventListener('click',()=>{
 });
 function translate(){
  const dict={
-  uk:{listMode:'Список',calendarMode:'Календар',kanbanMode:'Етапи',today:'Сьогодні',repeatLabel:'Повторення',noRepeat:'Без повторення',daily:'Щодня',weekly:'Щотижня',monthly:'Щомісяця',selectedDays:'Вибрані дні',chooseDays:'Дні тижня',allGroups:'Усі групи',statistics:'Статистика зі звітів',sampleCsv:'Шаблон CSV',importReport:'Імпорт звіту',metric:'Показник',views:'Перегляди',followers:'Підписники',likes:'Вподобання',comments:'Коментарі',shares:'Поширення',reportNote:'Лише дані імпортованого файлу, без підключення до акаунтів.',clearReports:'Видалити звіти',apiNotice:'Автоматичне підключення ще не налаштоване. Можеш завантажити власний звіт CSV або JSON для перегляду статистики.'},
-  en:{listMode:'List',calendarMode:'Calendar',kanbanMode:'Stages',today:'Today',repeatLabel:'Repeat',noRepeat:'No repeat',daily:'Daily',weekly:'Weekly',monthly:'Monthly',selectedDays:'Selected days',chooseDays:'Weekdays',allGroups:'All groups',statistics:'Imported statistics',sampleCsv:'CSV template',importReport:'Import report',metric:'Metric',views:'Views',followers:'Followers',likes:'Likes',comments:'Comments',shares:'Shares',reportNote:'Only data from imported files. No accounts are connected.',clearReports:'Clear reports',apiNotice:'Automatic connections are not configured yet. You can import your own CSV or JSON report to see statistics.'}
+  uk:{listMode:'Список',calendarMode:'Календар',kanbanMode:'Етапи',dragStages:'Перетягуй картки між етапами',today:'Сьогодні',repeatLabel:'Повторення',noRepeat:'Без повторення',daily:'Щодня',weekly:'Щотижня',monthly:'Щомісяця',selectedDays:'Вибрані дні',chooseDays:'Дні тижня',allGroups:'Усі групи',statistics:'Статистика зі звітів',sampleCsv:'Шаблон CSV',importReport:'Імпорт звіту',metric:'Показник',views:'Перегляди',followers:'Підписники',likes:'Вподобання',comments:'Коментарі',shares:'Поширення',reportNote:'Лише дані імпортованого файлу, без підключення до акаунтів.',clearReports:'Видалити звіти',apiNotice:'Автоматичне підключення ще не налаштоване. Можеш завантажити власний звіт CSV або JSON для перегляду статистики.'},
+  en:{listMode:'List',calendarMode:'Calendar',kanbanMode:'Stages',dragStages:'Drag cards between stages',today:'Today',repeatLabel:'Repeat',noRepeat:'No repeat',daily:'Daily',weekly:'Weekly',monthly:'Monthly',selectedDays:'Selected days',chooseDays:'Weekdays',allGroups:'All groups',statistics:'Imported statistics',sampleCsv:'CSV template',importReport:'Import report',metric:'Metric',views:'Views',followers:'Followers',likes:'Likes',comments:'Comments',shares:'Shares',reportNote:'Only data from imported files. No accounts are connected.',clearReports:'Clear reports',apiNotice:'Automatic connections are not configured yet. You can import your own CSV or JSON report to see statistics.'}
  };
  $$('[data-t]').forEach(el=>{const value=dict[L()]?.[el.dataset.t];if(value)el.textContent=value});
- renderVisual();renderAnalytics();onBoardRenderedFilter();
+ renderVisual();renderCalendar();renderAnalytics();onBoardRenderedFilter();
 }
-function onNavigate(page){if(page==='planner')renderVisual();if(page==='platforms')renderAnalytics();if(page==='board')drawBoardLines()}
+function onNavigate(page){if(page==='planner')renderVisual();if(page==='calendar')renderCalendar();if(page==='platforms')renderAnalytics();if(page==='board')drawBoardLines()}
 window.VIVERExtras={onNavigate,onPlansRendered,onRemindersRendered,onBoardRendered,drawBoardLines,setReminderRepeat,advanceReminder,translate,renderAnalytics};
 translate();onPlansRendered();onRemindersRendered();onBoardRendered();renderAnalytics();
 })();
