@@ -5,23 +5,29 @@ const fs=require('node:fs');
 const vm=require('node:vm');
 const {webcrypto}=require('node:crypto');
 const source=fs.readFileSync(require('node:path').join(__dirname,'../auth-worker/src/index.js'),'utf8');
-const pending=new Map(),accounts=new Map();
+const pending=new Map(),accounts=new Map(),youtubeCache=new Map(),snapshots=new Map();
 const DB={
  prepare(sql){const entry={sql,values:[],bind(...args){this.values=args;return this},
   async first(){
    const [a,b]=this.values;
    if(sql.includes('COUNT(*)'))return {total:[...pending.values()].filter(v=>v.client_hash===a).length};
    if(sql.includes('FROM oauth_pending'))return pending.get(a)&&pending.get(a).provider===b?pending.get(a):null;
+   if(sql.includes('FROM youtube_cache'))return youtubeCache.get(a)||null;
    if(sql.includes('FROM oauth_accounts'))return accounts.get(a+'|'+b)||null;
    return null
   },
-  async all(){const [hash]=this.values;return {results:[...accounts.values()].filter(v=>v.client_hash===hash)}},
+  async all(){const [h,id]=this.values;if(sql.includes('youtube_snapshots'))return {results:[...snapshots.values()].filter(x=>x.client_hash===h&&x.channel_id===id).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,60)};
+   return {results:[...accounts.values()].filter(v=>v.client_hash===h)}},
   async run(){
    const v=this.values;
    if(sql.includes('DELETE FROM oauth_pending WHERE created_at')){for(const [k,p] of pending){if(p.created_at<v[0])pending.delete(k)}}
    if(sql.includes('INSERT INTO oauth_pending'))pending.set(v[0],{state:v[0],client_hash:v[1],provider:v[2],verifier:v[3],created_at:v[4]});
    if(sql.includes('DELETE FROM oauth_pending WHERE state'))pending.delete(v[0]);
    if(sql.includes('INSERT INTO oauth_accounts'))accounts.set(v[0]+'|'+v[1],{client_hash:v[0],provider:v[1],subject:v[2],label:v[3],avatar:v[4],token_enc:v[5],refresh_enc:v[6],expires_at:v[7],updated_at:v[8]});
+   if(sql.includes('INSERT INTO youtube_cache'))youtubeCache.set(v[0],{client_hash:v[0],channel_id:v[1],payload:v[2],updated_at:v[3]});
+   if(sql.includes('INSERT INTO youtube_snapshots'))snapshots.set(v[0]+'|'+v[1]+'|'+v[2],{client_hash:v[0],channel_id:v[1],date:v[2],view_count:v[3],subscriber_count:v[4],video_count:v[5],recorded_at:v[6]});
+   if(sql.includes('DELETE FROM youtube_cache'))youtubeCache.delete(v[0]);
+   if(sql.includes('DELETE FROM youtube_snapshots')){for(const [k,row] of snapshots){if(row.client_hash===v[0])snapshots.delete(k)}}
    if(sql.includes('DELETE FROM oauth_accounts'))accounts.delete(v[0]+'|'+v[1]);
    return {success:true}
   }};return entry}
@@ -32,7 +38,9 @@ const seen=[];
 const mockFetch=async(url,opts)=>{
  seen.push({url:String(url),body:String(opts?.body||'')});
  if(String(url).includes('oauth2.googleapis.com/token'))return Response.json({access_token:'secret-access-token',refresh_token:'secret-refresh-token',expires_in:3600});
- if(String(url).includes('youtube/v3/channels'))return Response.json({items:[{id:'test-channel',snippet:{title:'Creator Test',thumbnails:{}}}]});
+ if(String(url).includes('youtube/v3/channels'))return Response.json({items:[{id:'test-channel',snippet:{title:'Creator Test',description:'Test channel',thumbnails:{default:{url:'https://example.com/avatar.jpg'}}},statistics:{viewCount:'15200',subscriberCount:'789',videoCount:'12',hiddenSubscriberCount:false},contentDetails:{relatedPlaylists:{uploads:'UUTESTUPLOADS'}}}]});
+ if(String(url).includes('youtube/v3/playlistItems'))return Response.json({items:[{contentDetails:{videoId:'AbCdEfGhIjK'}}]});
+ if(String(url).includes('youtube/v3/videos'))return Response.json({items:[{id:'AbCdEfGhIjK',snippet:{title:'Latest clip',publishedAt:'2026-10-20T12:00:00Z'},status:{privacyStatus:'public'},statistics:{viewCount:'420',likeCount:'30'}}]});
  return Response.json({error:'mock provider not implemented'}, {status:404});
 };
 const sandbox={crypto:webcrypto,URL,URLSearchParams,TextEncoder,TextDecoder,Request,Response,fetch:mockFetch,btoa,atob,console,Uint8Array,Date,JSON,Error};
@@ -70,7 +78,23 @@ const req=(path,method='GET',origin='https://flekideveloper.github.io',token=key
  assert.equal(status.connections[0].label,'Creator Test');
  assert.equal(status.connections[0].connected,true);
  assert(!JSON.stringify(status).includes('secret-access-token'),'no credentials in browser response');
+ assert.equal((await worker.fetch(req('/youtube/stats','GET','https://bad.example'),env)).status,403,'YouTube stats enforce allowed Origin');
+ assert.equal((await worker.fetch(req('/youtube/stats','GET','https://flekideveloper.github.io','invalid'),env)).status,401,'YouTube stats require capability');
+ const live=await worker.fetch(req('/youtube/stats'),env);assert.equal(live.status,200,'connected user receives live metrics');
+ const metrics=await live.json();assert.equal(metrics.totals.views,15200);assert.equal(metrics.totals.subscribers,789);
+ assert.equal(metrics.totals.videos,12);assert.equal(metrics.recent[0].title,'Latest clip');
+ assert.equal(metrics.history.length,1,'first true daily snapshot created');
+ assert.equal(metrics.fromCache,false,'first snapshot fetched from YouTube');
+ assert(!JSON.stringify(metrics).includes('secret-access-token'),'client receives no YouTube token');
+ const calls=seen.filter(x=>x.url.includes('youtube/v3/')).length;
+ const cached=await (await worker.fetch(req('/youtube/stats'),env)).json();
+ assert.equal(cached.fromCache,true,'repeated reads use server-side cache');
+ assert.equal(seen.filter(x=>x.url.includes('youtube/v3/')).length,calls,'cache prevents extra YouTube API calls');
+ assert.equal(youtubeCache.size,1,'cache stored privately');assert.equal(snapshots.size,1,'history stored privately');
  assert.equal((await worker.fetch(req('/connections/youtube','DELETE'),env)).status,200);
+ assert.equal(youtubeCache.size,0,'disconnect erases channel cache');
+ assert.equal(snapshots.size,0,'disconnect erases snapshots');
+ assert.equal((await worker.fetch(req('/youtube/stats'),env)).status,404,'unlinked user cannot see channel metrics');
  assert.equal(accounts.size,0,'disconnect clears encrypted tokens');
- console.log('VIVER OAuth tests: PASS — four authorization URLs, PKCE, CORS, encrypted token storage, one-time state and unlink');
+ console.log('VIVER OAuth tests: PASS — OAuth, PKCE, encrypted tokens, live YouTube metrics, cache, history, no token leaks, disconnect');
 })().catch(e=>{console.error(e);process.exit(1)});
