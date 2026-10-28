@@ -1,0 +1,36 @@
+name: Verify VIVER interactions
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'app.js'
+      - 'features.js'
+      - 'index.html'
+      - 'tests/**'
+      - '.github/workflows/verify.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: viver-verification
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout VIVER
+        uses: actions/checkout@v4
+      - name: Check JavaScript
+        run: |
+          node --check app.js
+          node --check features.js
+          node --check tests/smoke.cjs
+      - name: Install test dependency
+        run: npm install --no-save --no-package-lock --prefer-offline jsdom@26
+      - name: Run interactive DOM tests
+        run: node tests/smoke.cjs
