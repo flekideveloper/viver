@@ -7,9 +7,9 @@
 <meta name="description" content="VIVER — простір для ідей, планування контенту та нагадувань.">
 <title>VIVER</title>
 <link rel="icon" href="./favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="./style.css?v=4">
-<script defer src="./app.js?v=4"></script>
-<script defer src="./features.js?v=4"></script>
+<link rel="stylesheet" href="./style.css?v=5">
+<script defer src="./app.js?v=5"></script>
+<script defer src="./features.js?v=5"></script>
 </head>
 <body>
 <svg class="sprites" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
@@ -40,7 +40,7 @@
   <button class="nav-item" data-page="calendar" type="button"><svg><use href="#i-calendar"/></svg><span data-t="calendar">Календар</span></button>
   <button class="nav-item" data-page="reminders" type="button"><svg><use href="#i-bell"/></svg><span data-t="reminders">Нагадування</span><span id="nav-reminder-count" class="nav-count" hidden></span></button>
   <button class="nav-item" data-page="board" type="button"><svg><use href="#i-board"/></svg><span data-t="board">Дошка ідей</span></button>
-  <button class="nav-item" data-page="platforms" type="button"><svg><use href="#i-link"/></svg><span data-t="platforms">Платформи</span></button>
+  <button class="nav-item" data-page="platforms" type="button"><svg><use href="#i-link"/></svg><span data-t="platforms">Статистика</span></button>
  </nav>
  <div class="sidebar-bottom"><button class="nav-item" data-page="settings" type="button"><svg><use href="#i-settings"/></svg><span data-t="settings">Налаштування</span></button><div class="local-label"><span class="local-dot"></span><span data-t="local">Дані на цьому пристрої</span></div></div>
 </aside>
@@ -48,7 +48,7 @@
 <div class="content-shell">
  <header class="topbar">
   <div class="topbar-left"><button id="menu" class="icon-button mobile-menu" type="button" aria-label="Меню"><svg><use href="#i-menu"/></svg></button><strong id="page-heading">Огляд</strong></div>
-  <div class="topbar-right"><button id="search-open" class="icon-button" type="button" aria-label="Пошук" title="Пошук • Ctrl+K"><svg><use href="#i-search"/></svg></button><span class="top-divider"></span><span class="account-icon" title="VIVER">V</span></div>
+  <div class="topbar-right"><button id="search-open" class="icon-button" type="button" aria-label="Пошук" title="Пошук • Ctrl+K"><svg><use href="#i-search"/></svg></button></div>
  </header>
  <main id="main" tabindex="-1">
   <section class="page active" id="page-home">
@@ -64,9 +64,9 @@
    </div>
   </section>
   <section class="page" id="page-planner">
-   <div class="page-title"><h1 data-t="planner">Планер</h1><div class="planner-header"><span id="plan-count" class="count"></span><div class="segmented" id="plan-modes"><button type="button" data-plan-mode="list" class="active" data-t="listMode">Список</button><button type="button" data-plan-mode="board" data-t="kanbanMode">Етапи</button></div></div></div>
-   <div class="workspace-grid">
-    <div class="panel form-panel"><h2 id="plan-form-heading" data-t="newPost">Новий запис</h2>
+   <div class="page-title"><h1 data-t="planner">Планер</h1><div class="planner-header"><span id="plan-count" class="count"></span><div class="segmented" id="plan-modes"><button type="button" data-plan-mode="list" class="active" data-t="listMode">Список</button><button type="button" data-plan-mode="board" data-t="kanbanMode">Етапи</button></div><button type="button" class="primary-button" id="plan-new-top"><svg><use href="#i-plus"/></svg><span data-t="newPost">Новий запис</span></button></div></div>
+   <div class="workspace-grid" id="planner-layout">
+    <div class="panel form-panel" id="plan-editor"><h2 id="plan-form-heading" data-t="newPost">Новий запис</h2>
      <form id="plan-form">
       <label><span data-t="title">Назва</span><input id="plan-title" maxlength="110" required placeholder="Назва відео або стриму" data-ph="contentPlaceholder"></label>
       <div class="two-fields"><label><span data-t="platform">Платформа</span><select id="plan-platform"><option value="youtube">YouTube</option><option value="tiktok">TikTok</option><option value="twitch">Twitch</option><option value="x">X</option><option value="other" data-t="other">Інше</option></select></label>
@@ -94,9 +94,9 @@
    </div>
   </section>
   <section class="page" id="page-reminders">
-   <div class="page-title"><h1 data-t="reminders">Нагадування</h1><button type="button" class="secondary-button" id="enable-alerts"><svg><use href="#i-bell"/></svg><span data-t="alerts">Сповіщення</span></button></div>
-   <div class="workspace-grid">
-    <div class="panel form-panel"><h2 id="reminder-form-heading" data-t="newReminder">Нове нагадування</h2>
+   <div class="page-title"><h1 data-t="reminders">Нагадування</h1><div class="row-buttons"><button type="button" class="secondary-button" id="enable-alerts" title="Сповіщення працюють, поки вкладка відкрита"><svg><use href="#i-bell"/></svg><span data-t="alerts">Сповіщення</span></button><button type="button" class="primary-button" id="reminder-new-top"><svg><use href="#i-plus"/></svg><span data-t="newReminder">Нове нагадування</span></button></div></div>
+   <div class="workspace-grid" id="reminder-layout">
+    <div class="panel form-panel" id="reminder-editor"><h2 id="reminder-form-heading" data-t="newReminder">Нове нагадування</h2>
      <form id="reminder-form">
       <label><span data-t="title">Назва</span><input id="reminder-title" maxlength="110" required placeholder="Що потрібно зробити?" data-ph="taskPlaceholder"></label>
       <label><span data-t="date">Дата й час</span><input id="reminder-due" type="datetime-local" required></label>
@@ -130,18 +130,11 @@
    <input type="file" accept="image/*" id="note-image-input" hidden>
   </section>
   <section class="page" id="page-platforms">
-   <div class="page-title"><h1 data-t="platforms">Платформи</h1></div>
-   <div class="panel platforms-panel">
-    <div class="platform-row"><span class="platform-icon youtube">▶</span><span><strong>YouTube</strong><small data-t="pending">Не підключено</small></span><span class="tag" data-t="unavailable">Недоступно</span></div>
-    <div class="platform-row"><span class="platform-icon tiktok">♪</span><span><strong>TikTok</strong><small data-t="pending">Не підключено</small></span><span class="tag" data-t="unavailable">Недоступно</span></div>
-    <div class="platform-row"><span class="platform-icon twitch">◪</span><span><strong>Twitch</strong><small data-t="pending">Не підключено</small></span><span class="tag" data-t="unavailable">Недоступно</span></div>
-    <div class="platform-row"><span class="platform-icon x">𝕏</span><span><strong>X / Twitter</strong><small data-t="pending">Не підключено</small></span><span class="tag" data-t="unavailable">Недоступно</span></div>
-   </div>
-   <p class="platform-footnote" data-t="apiNotice">Автоматичне підключення ще не налаштоване. Можеш завантажити власний звіт CSV або JSON для перегляду статистики.</p>
-   <div class="panel analytics-panel"><div class="panel-title"><h2 data-t="statistics">Статистика зі звітів</h2><div class="row-buttons"><button class="secondary-button" id="report-template" type="button" data-t="sampleCsv">Шаблон CSV</button><label class="secondary-button file-button" for="report-import"><svg><use href="#i-upload"/></svg><span data-t="importReport">Імпорт звіту</span><input id="report-import" type="file" accept=".csv,.json,text/csv,application/json" hidden></label></div></div>
+   <div class="page-title"><h1 data-t="platforms">Статистика</h1></div>
+   <div class="panel analytics-panel"><div class="panel-title"><h2 data-t="statistics">Звіти</h2><div class="row-buttons"><button class="secondary-button" id="report-template" type="button" data-t="sampleCsv">Шаблон CSV</button><label class="secondary-button file-button" for="report-import"><svg><use href="#i-upload"/></svg><span data-t="importReport">Імпорт звіту</span><input id="report-import" type="file" accept=".csv,.json,text/csv,application/json" hidden></label></div></div>
     <div class="analytics-filters"><label><span data-t="platform">Платформа</span><select id="analytics-provider"><option value="youtube">YouTube</option><option value="tiktok">TikTok</option><option value="twitch">Twitch</option><option value="x">X</option></select></label><label><span data-t="metric">Показник</span><select id="analytics-metric"><option value="views" data-t="views">Перегляди</option><option value="followers" data-t="followers">Підписники</option><option value="likes" data-t="likes">Вподобання</option><option value="comments" data-t="comments">Коментарі</option><option value="shares" data-t="shares">Поширення</option></select></label></div>
     <div class="analytics-chart" id="analytics-chart"></div>
-    <div class="analytics-bottom"><small data-t="reportNote">Лише дані завантаженого файлу, без підключення до акаунтів.</small><button id="analytics-clear" type="button" class="text-button" data-t="clearReports">Видалити звіти</button></div>
+    <div class="analytics-bottom"><small data-t="reportNote">Статистика лише з імпортованих звітів. Автоматичне підключення соцмереж ще недоступне.</small><button id="analytics-clear" type="button" class="text-button" data-t="clearReports">Видалити звіти</button></div>
    </div>
   </section>
   <section class="page" id="page-settings">
@@ -162,6 +155,14 @@
  </main>
 </div>
 </div>
+<dialog id="note-details-dialog" class="note-details-dialog" aria-labelledby="note-details-title">
+ <form id="note-details-form" method="dialog">
+  <div class="note-dialog-heading"><h2 id="note-details-title" data-t="noteDetails">Деталі стікера</h2><button type="button" class="icon-button" id="note-details-close" aria-label="Закрити"><svg><use href="#i-close"/></svg></button></div>
+  <label><span data-t="noteGroup">Група</span><input id="note-details-group" maxlength="36" placeholder="Необов'язково" data-ph="optional" autocomplete="off"></label>
+  <label><span data-t="noteLink">Посилання (HTTPS)</span><input id="note-details-link" type="url" maxlength="500" placeholder="https://…" autocomplete="off"></label>
+  <div class="form-actions"><button type="submit" class="primary-button" id="note-details-save" data-t="saveChanges">Зберегти зміни</button><button type="button" class="quiet-button" id="note-details-cancel" data-t="cancel">Скасувати</button></div>
+ </form>
+</dialog>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <dialog id="search-dialog" class="search-dialog"><div class="search-top"><svg><use href="#i-search"/></svg><input type="search" id="search-input" placeholder="Знайти в моїх записах…" data-ph="searchPlaceholder" autocomplete="off"><button class="icon-button" type="button" id="search-close" aria-label="Закрити"><svg><use href="#i-close"/></svg></button></div><div class="search-results" id="search-results"></div><div class="search-footer">Esc · <span data-t="close">Закрити</span></div></dialog>
 </body>
