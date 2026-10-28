@@ -20,3 +20,23 @@ CREATE TABLE IF NOT EXISTS oauth_accounts (
   PRIMARY KEY(client_hash,provider)
 );
 CREATE INDEX IF NOT EXISTS idx_oauth_accounts_updated ON oauth_accounts(updated_at);
+
+-- Daily YouTube channel snapshots, collected on successful user visits (not inferred).
+CREATE TABLE IF NOT EXISTS youtube_cache (
+  client_hash TEXT PRIMARY KEY,
+  channel_id TEXT NOT NULL,
+  payload TEXT NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS youtube_snapshots (
+  client_hash TEXT NOT NULL,
+  channel_id TEXT NOT NULL,
+  date TEXT NOT NULL,
+  view_count INTEGER NOT NULL,
+  subscriber_count INTEGER,
+  video_count INTEGER NOT NULL,
+  recorded_at INTEGER NOT NULL,
+  PRIMARY KEY (client_hash, channel_id, date)
+);
+CREATE INDEX IF NOT EXISTS idx_youtube_snapshots_by_client
+  ON youtube_snapshots (client_hash, channel_id, date);
