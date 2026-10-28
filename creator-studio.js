@@ -213,7 +213,7 @@
   alert.innerHTML='<button type="button" data-studio-jump="alerts" class="creator-home-tool"><span>♧ '+t('Сповіщення','Alerts')+'</span><strong>'+count+' '+t('нових','unread')+'</strong></button>';
  }
  function render(){
-  root.hidden=!linked();
+  root.hidden=!linked()||(!!window.VIVERPlatformHub&&window.VIVERPlatformHub.getSelected()!=='youtube');
   if(!linked()){home.hidden=true;return}
   $('#studio-heading').textContent=t('Мій YouTube · Creator Studio','My YouTube · Creator Studio');
   $('#studio-caption').textContent=t('Відео, планер, цілі, події та порівняння','Videos, planner, goals, alerts and comparisons');
