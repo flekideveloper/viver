@@ -238,3 +238,44 @@ dialog{background:var(--card);border:1px solid var(--border);color:var(--text);b
 .connection-info{margin:12px 0 0;color:var(--hint);font-size:11px;line-height:1.6}
 #page-platforms .analytics-panel{margin-top:0}
 @media(max-width:680px){.connection-grid{grid-template-columns:1fr}.account-link-row:nth-child(2){border-top:1px solid var(--border)}#page-platforms .connections-panel{padding:18px}.account-action{min-width:103px}.account-link-row{gap:9px}}
+
+
+/* Connected YouTube channel · read-only live data, separate from CSV import */
+#page-platforms .youtube-live-panel{max-width:950px;margin:0 0 15px;padding:21px 23px}
+.youtube-heading{display:flex;align-items:center;gap:10px;min-width:0}
+.youtube-heading h2{font-size:14px;letter-spacing:-.01em;margin:0;font-weight:650}
+.youtube-heading-mark{display:grid;place-items:center;background:#e63636;color:#fff;border-radius:7px;width:29px;height:29px;flex:none;font-size:13px}
+#youtube-refresh{font-size:12px;display:flex;align-items:center;gap:8px;white-space:nowrap}
+#youtube-refresh>span[aria-hidden]{font-size:19px;line-height:12px}
+.youtube-status{font-size:12px;color:var(--sub);line-height:1.6;padding:15px 0 3px}
+.youtube-live-data{margin-top:4px}
+.youtube-channel-profile{display:flex;align-items:center;gap:13px;border-bottom:1px solid var(--border);padding:4px 0 20px;min-width:0}
+.youtube-channel-avatar{width:46px;height:46px;object-fit:cover;flex:none;border-radius:50%;background:var(--hover);color:var(--text)}
+.youtube-channel-avatar.placeholder{display:grid;place-items:center}
+.youtube-channel-caption{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.youtube-channel-caption strong{font-size:15px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.youtube-channel-caption>span{font-size:11px;line-height:1.4;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.youtube-profile-link{border:1px solid var(--border);border-radius:7px;padding:8px 10px;text-decoration:none;color:var(--text);font-size:11px;white-space:nowrap}
+.youtube-profile-link:hover{background:var(--hover)}
+.youtube-live-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;padding:17px 0}
+.youtube-metric{display:flex;flex-direction:column;min-width:0;border:1px solid var(--border);border-radius:9px;padding:16px 15px;gap:7px}
+.youtube-metric>span{font-size:11px;color:var(--sub)}
+.youtube-metric strong{font-size:clamp(21px,2vw,30px);line-height:1.15;font-weight:650;letter-spacing:-.04em;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.youtube-metric small{font-size:10px;line-height:1.4;color:var(--hint)}
+.youtube-subtitle{font-size:12px;font-weight:650;color:var(--text);display:flex;justify-content:space-between;align-items:center;gap:12px}
+.youtube-subtitle small{font-size:10px;line-height:1.4;color:var(--hint);font-weight:400}
+.youtube-history{padding:13px 0 22px;border-top:1px solid var(--border)}
+.youtube-history svg{width:100%;height:auto;margin:15px 0 0;max-height:155px}
+.youtube-history-ends{display:flex;justify-content:space-between;gap:15px;color:var(--sub);font-size:10px;font-variant-numeric:tabular-nums}
+.youtube-latest{padding-top:17px;border-top:1px solid var(--border)}
+.youtube-video{display:flex;justify-content:space-between;align-items:center;gap:18px;padding:13px 0;border-bottom:1px solid var(--border);text-decoration:none;color:var(--text);min-width:0}
+.youtube-video:last-child{border-bottom:0}
+.youtube-video:hover strong{color:var(--accent)}
+.youtube-video-name{min-width:0;display:flex;flex-direction:column;gap:4px}
+.youtube-video-name strong{font-size:12px;line-height:1.4;font-weight:570;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.youtube-video-name small{color:var(--hint);font-size:10px}
+.youtube-video-views{flex:none;color:var(--sub);font-size:11px;white-space:nowrap}
+.youtube-muted{font-size:11px;color:var(--hint);margin:15px 0}
+.youtube-foot{font-size:10px;color:var(--hint);line-height:1.6;padding-top:13px;border-top:1px solid var(--border)}
+@media(max-width:690px){.youtube-live-metrics{grid-template-columns:1fr 1fr}.youtube-metric:last-child{grid-column:span 2}.youtube-subtitle{align-items:flex-start;flex-direction:column;gap:3px}.youtube-channel-caption>span{max-width:250px}}
+@media(max-width:450px){#page-platforms .youtube-live-panel{padding:15px}.youtube-live-metrics{gap:7px}.youtube-metric{padding:12px 11px}.youtube-metric strong{font-size:22px}.youtube-profile-link{padding:7px;font-size:10px}.youtube-video{align-items:flex-start;gap:7px;flex-direction:column}}
