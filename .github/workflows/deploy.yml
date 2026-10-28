@@ -36,6 +36,7 @@ jobs:
           test -s youtube.js
           test -s overview-analytics.js
           test -s creator-studio.js
+          test -s platform-hub.js
           test -s style.css
           test -s favicon.svg
           node --check app.js
@@ -44,6 +45,7 @@ jobs:
           node --check youtube.js
           node --check overview-analytics.js
           node --check creator-studio.js
+          node --check platform-hub.js
           grep -q 'src="./app.js' index.html
           grep -q 'href="./style.css' index.html
 
@@ -52,7 +54,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p _site
-          cp index.html app.js features.js connections.js youtube.js overview-analytics.js creator-studio.js style.css favicon.svg _site/
+          cp index.html app.js features.js connections.js youtube.js overview-analytics.js creator-studio.js platform-hub.js style.css favicon.svg _site/
           touch _site/.nojekyll
           printf '%s\n' 'VIVER static site prepared.'
 
