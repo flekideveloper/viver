@@ -15,7 +15,7 @@
  const validId=s=>/^[A-Za-z0-9_-]{11}$/.test(String(s||''));
  const KEY='viver-creator-studio-v1';
  const kinds={subscribers:[t('Підписники','Subscribers'),'subscribers'],views:[t('Перегляди каналу','Channel views'),'views'],videos:[t('Відео','Videos'),'videos']};
- let memory={},tab='videos',catalog=null,channelStats=null,retention=null,comparison=null,selection='',loading=false,loadingStats=false,error='',lastFetch=0,seq=0,channel='',compareA='',compareB='';
+ let memory={},tab='videos',catalog=null,channelStats=null,retention=null,comparison=null,selection='',loading=false,loadingStats=false,error='',lastFetch=0,seq=0,channel='',connectedLabel='',compareA='',compareB='';
  try{
   const v=JSON.parse(localStorage.getItem(KEY)||'{}');
   memory=v&&typeof v==='object'&&!Array.isArray(v)?v:{};
@@ -297,8 +297,13 @@
  window.addEventListener('hashchange',()=>setTimeout(update,0));
  $('#language')?.addEventListener('change',()=>setTimeout(render,0));
  function update(){
+  const active=auth.getConnections().find(x=>x.provider==='youtube'&&x.connected);
+  if(active&&connectedLabel&&active.label!==connectedLabel){
+   seq++;catalog=null;channelStats=null;channel='';error='';loading=false;selection='';comparison=null;retention=null;lastFetch=0;
+  }
+  if(active)connectedLabel=active.label;
   if(!linked()){
-   seq++;catalog=null;channelStats=null;channel='';error='';loading=false;selection='';comparison=null;retention=null;lastFetch=0;render();return;
+   seq++;catalog=null;channelStats=null;channel='';connectedLabel='';error='';loading=false;selection='';comparison=null;retention=null;lastFetch=0;render();return;
   }
   render();
   if(core.page==='home'||core.page==='platforms')load();
