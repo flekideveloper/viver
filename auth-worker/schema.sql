@@ -40,3 +40,11 @@ CREATE TABLE IF NOT EXISTS youtube_snapshots (
 );
 CREATE INDEX IF NOT EXISTS idx_youtube_snapshots_by_client
   ON youtube_snapshots (client_hash, channel_id, date);
+
+-- Cached YouTube Analytics weekly report and discovery sections; no OAuth tokens in cache.
+CREATE TABLE IF NOT EXISTS youtube_analytics_cache (
+  client_hash TEXT PRIMARY KEY,
+  channel_id TEXT NOT NULL,
+  payload TEXT NOT NULL,
+  updated_at INTEGER NOT NULL
+);
