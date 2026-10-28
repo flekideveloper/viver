@@ -224,11 +224,12 @@
    btn.classList.toggle('active',btn.dataset.studioTab===tab);
    btn.setAttribute('aria-selected',String(btn.dataset.studioTab===tab));
    btn.textContent=dict[btn.dataset.studioTab][0];
+   if(btn.dataset.studioTab==='alerts'){const n=document.createElement('span');n.id='studio-alert-count';n.hidden=true;btn.appendChild(n)}
   }
   const s=space(),badge=$('#studio-alert-count'),unread=s?s.alerts.filter(x=>!x.read).length:0;
   if(badge){badge.hidden=!unread;badge.textContent=unread?String(unread):''}
   const views={videos:videosTab,planner:plannerTab,goals:goalsTab,alerts:alertsTab,compare:compareTab};
-  body.innerHTML=views[tab]();
+  body.innerHTML=!channel&&tab!=='videos'?'<div class="studio-empty">'+t('Завантажуємо дані твого YouTube-каналу…','Loading your YouTube channel…')+'</div>':views[tab]();
   renderHome();
  }
  function jump(next){tab=next;core.nav('platforms');render();load()}
