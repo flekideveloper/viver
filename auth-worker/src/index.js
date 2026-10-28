@@ -8,9 +8,9 @@ const HOME = SITE + '/viver/#platforms';
 const PROVIDERS = {
   youtube: {id:'GOOGLE_CLIENT_ID',secret:'GOOGLE_CLIENT_SECRET',scope:'https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/yt-analytics.readonly',
     authorize:'https://accounts.google.com/o/oauth2/v2/auth',token:'https://oauth2.googleapis.com/token'},
-  tiktok: {id:'TIKTOK_CLIENT_KEY',secret:'TIKTOK_CLIENT_SECRET',scope:'user.info.basic',
+  tiktok: {id:'TIKTOK_CLIENT_KEY',secret:'TIKTOK_CLIENT_SECRET',scope:'user.info.basic,user.info.profile,user.info.stats,video.list',
     authorize:'https://www.tiktok.com/v2/auth/authorize/',token:'https://open.tiktokapis.com/v2/oauth/token/'},
-  twitch: {id:'TWITCH_CLIENT_ID',secret:'TWITCH_CLIENT_SECRET',scope:'',
+  twitch: {id:'TWITCH_CLIENT_ID',secret:'TWITCH_CLIENT_SECRET',scope:'moderator:read:followers',
     authorize:'https://id.twitch.tv/oauth2/authorize',token:'https://id.twitch.tv/oauth2/token'},
   x: {id:'X_CLIENT_ID',secret:'X_CLIENT_SECRET',scope:'users.read tweet.read offline.access',
     authorize:'https://x.com/i/oauth2/authorize',token:'https://api.x.com/2/oauth2/token'}
@@ -119,6 +119,10 @@ async function callback(req,env,provider){
   const access=await encrypted(env,grant.access_token);
   const refresh=grant.refresh_token?await encrypted(env,grant.refresh_token):null;
   const old=await env.DB.prepare('SELECT refresh_enc,subject FROM oauth_accounts WHERE client_hash=? AND provider=?').bind(pending.client_hash,provider).first();
+  if(provider!=='youtube'&&old?.subject&&old.subject!==profile.id){
+   await env.DB.prepare('DELETE FROM social_overview_cache WHERE client_hash=? AND provider=?').bind(pending.client_hash,provider).run();
+   await env.DB.prepare('DELETE FROM social_metric_snapshots WHERE client_hash=? AND provider=?').bind(pending.client_hash,provider).run();
+  }
   if(provider==='youtube'&&old?.subject&&old.subject!==profile.id){
    await env.DB.prepare('DELETE FROM youtube_cache WHERE client_hash=?').bind(pending.client_hash).run();
    await env.DB.prepare('DELETE FROM youtube_snapshots WHERE client_hash=?').bind(pending.client_hash).run();
@@ -451,6 +455,133 @@ async function youtubeVideoCompare(req,env){
  }catch(e){return json({error:'youtube_compare_unavailable'},503)}
 }
 
+
+/** Server-only read-only insights for each independently authorized network. */
+const SOCIAL_CACHE_MS=15*60*1000;
+const socialNumber=x=>x===null||x===undefined||x===''?null:(Number.isSafeInteger(Number(x))&&Number(x)>=0?Number(x):null);
+const socialSafe=x=>String(x||'').slice(0,200);
+async function providerJson(url,token,opts={}){
+ const response=await fetch(url,{method:opts.method||'GET',headers:{Authorization:'Bearer '+token,...(opts.headers||{})},...(opts.body?{body:JSON.stringify(opts.body)}:{})});
+ if(!response.ok){
+  if(response.status===401)throw Error('social_token_expired');
+  if(response.status===403)throw Error('social_access_denied');
+  if(response.status===429)throw Error('social_rate_limited');
+  throw Error('social_provider_unavailable');
+ }
+ const result=await response.json();
+ if(result.error&&typeof result.error==='object'&&result.error.code&&result.error.code!=='ok')throw Error('social_access_denied');
+ return result;
+}
+async function socialDetails(provider,token,env){
+ if(provider==='twitch'){
+  const headers={'Client-Id':env.TWITCH_CLIENT_ID};
+  const users=await providerJson('https://api.twitch.tv/helix/users',token,{headers});
+  const user=users.data?.[0];if(!user?.id)throw Error('social_profile_unavailable');
+  const id=encodeURIComponent(user.id);
+  const calls=await Promise.allSettled([
+   providerJson('https://api.twitch.tv/helix/channels/followers?broadcaster_id='+id,token,{headers}),
+   providerJson('https://api.twitch.tv/helix/streams?user_id='+id,token,{headers}),
+   providerJson('https://api.twitch.tv/helix/videos?user_id='+id+'&first=20&type=archive',token,{headers}),
+   providerJson('https://api.twitch.tv/helix/clips?broadcaster_id='+id+'&first=20',token,{headers}),
+   providerJson('https://api.twitch.tv/helix/channels?broadcaster_id='+id,token,{headers})
+  ]);
+  const get=i=>calls[i].status==='fulfilled'?calls[i].value:null;
+  const follower=socialNumber(get(0)?.total);
+  const stream=get(1)?.data?.[0],channel=get(4)?.data?.[0];
+  const videos=(get(2)?.data||[]).filter(x=>x.id).map(x=>({
+   id:socialSafe(x.id),title:socialSafe(x.title),publishedAt:String(x.published_at||x.created_at||''),
+   url:String(x.url||'').startsWith('https://www.twitch.tv/')?x.url:'',
+   views:socialNumber(x.view_count),kind:'vod',thumbnail:String(x.thumbnail_url||'').slice(0,400)
+  }));
+  const clips=(get(3)?.data||[]).filter(x=>x.id).map(x=>({
+   id:socialSafe(x.id),title:socialSafe(x.title),publishedAt:String(x.created_at||''),
+   url:String(x.url||'').startsWith('https://clips.twitch.tv/')||String(x.url||'').startsWith('https://www.twitch.tv/')?x.url:'',
+   views:socialNumber(x.view_count),kind:'clip',thumbnail:String(x.thumbnail_url||'').slice(0,400)
+  }));
+  return {
+   account:{id:String(user.id),label:socialSafe(user.display_name||user.login),avatar:String(user.profile_image_url||''),url:'https://www.twitch.tv/'+encodeURIComponent(user.login||'')},
+   metrics:{followers:follower,liveViewers:stream?socialNumber(stream.viewer_count):null,vods:null,clips:null},
+   live:stream?{online:true,title:socialSafe(stream.title),viewers:socialNumber(stream.viewer_count),game:socialSafe(stream.game_name),startedAt:stream.started_at}: {online:false,title:socialSafe(channel?.title),game:socialSafe(channel?.game_name)},
+   content:[...videos,...clips].sort((a,b)=>String(b.publishedAt).localeCompare(String(a.publishedAt))).slice(0,35),
+   sections:{followers:calls[0].status==='fulfilled',live:calls[1].status==='fulfilled',vods:calls[2].status==='fulfilled',clips:calls[3].status==='fulfilled'},
+   notes:['twitch_no_historical_audience_api']
+  };
+ }
+ if(provider==='tiktok'){
+  const fields='open_id,display_name,avatar_url,username,profile_deep_link,follower_count,following_count,likes_count,video_count';
+  const userData=await providerJson('https://open.tiktokapis.com/v2/user/info/?fields='+fields,token);
+  const user=userData.data?.user;if(!user?.open_id)throw Error('social_profile_unavailable');
+  let list=null;
+  try{
+   list=await providerJson('https://open.tiktokapis.com/v2/video/list/?fields=id,title,video_description,create_time,cover_image_url,share_url,view_count,like_count,comment_count,share_count',token,
+   {method:'POST',headers:{'Content-Type':'application/json'},body:{max_count:20}});
+  }catch(e){console.warn('VIVER TikTok video list unavailable',e.message)}
+  const content=(list?.data?.videos||[]).map(x=>({
+    id:String(x.id||'').slice(0,40),title:socialSafe(x.title||x.video_description),publishedAt:x.create_time?new Date(Number(x.create_time)*1000).toISOString():'',
+    url:/^https:\/\/(www\.)?tiktok\.com\//.test(x.share_url||'')?String(x.share_url).slice(0,500):'',
+    thumbnail:String(x.cover_image_url||'').slice(0,500),kind:'video',
+    views:socialNumber(x.view_count),likes:socialNumber(x.like_count),comments:socialNumber(x.comment_count),shares:socialNumber(x.share_count)
+   })).filter(x=>x.id);
+  return {
+    account:{id:String(user.open_id),label:socialSafe(user.display_name||user.username),avatar:String(user.avatar_url||''),
+     url:user.username?'https://www.tiktok.com/@'+encodeURIComponent(user.username):''},
+    metrics:{followers:socialNumber(user.follower_count),following:socialNumber(user.following_count),likes:socialNumber(user.likes_count),videos:socialNumber(user.video_count)},
+    content,sections:{videos:!!list},notes:['tiktok_public_display_api_no_historical_view_reports']
+  };
+ }
+ if(provider==='x'){
+  const me=await providerJson('https://api.x.com/2/users/me?user.fields=public_metrics,profile_image_url,username,description',token);
+  const user=me.data;if(!user?.id)throw Error('social_profile_unavailable');
+  let timeline=null;
+  try{timeline=await providerJson('https://api.x.com/2/users/'+encodeURIComponent(user.id)+'/tweets?max_results=25&tweet.fields=created_at,public_metrics,author_id&exclude=retweets',token)}
+  catch(e){console.warn('VIVER X timeline unavailable',e.message)}
+  const content=(timeline?.data||[]).filter(x=>String(x.author_id||user.id)===String(user.id)).map(x=>({
+   id:String(x.id||'').slice(0,24),title:socialSafe(x.text||''),
+   publishedAt:String(x.created_at||''),kind:'post',
+   url:user.username?'https://x.com/'+encodeURIComponent(user.username)+'/status/'+encodeURIComponent(x.id):'',
+   views:socialNumber(x.public_metrics?.impression_count),likes:socialNumber(x.public_metrics?.like_count),
+   comments:socialNumber(x.public_metrics?.reply_count),shares:socialNumber(x.public_metrics?.retweet_count),
+   quotes:socialNumber(x.public_metrics?.quote_count)
+  }));
+  const m=user.public_metrics||{};
+  return {
+   account:{id:String(user.id),label:socialSafe(user.name||user.username),avatar:String(user.profile_image_url||''),
+    url:user.username?'https://x.com/'+encodeURIComponent(user.username):''},
+   metrics:{followers:socialNumber(m.followers_count),following:socialNumber(m.following_count),posts:socialNumber(m.tweet_count),likes:socialNumber(m.like_count)},
+   content,sections:{posts:!!timeline},notes:['x_timeline_and_insights_depend_on_api_plan']
+  };
+ }
+ throw Error('invalid_social_provider');
+}
+async function socialOverview(req,env,provider){
+ if(!['twitch','tiktok','x'].includes(provider))return json({error:'Unknown provider'},404);
+ const key=authHeader(req);if(!key)return json({error:'Connection key required'},401);
+ const clientHash=await hash(key);
+ const row=await env.DB.prepare('SELECT * FROM oauth_accounts WHERE client_hash=? AND provider=?').bind(clientHash,provider).first();
+ if(!row)return json({error:'social_not_connected'},404);
+ const active=await refreshIfNeeded(env,row);
+ if(active.expired)return json({error:'social_reconnect_required'},401);
+ if(!config(env,provider))return json({error:'social_provider_not_configured'},409);
+ const cached=await env.DB.prepare('SELECT subject,payload,updated_at FROM social_overview_cache WHERE client_hash=? AND provider=?').bind(clientHash,provider).first();
+ if(cached&&cached.subject===row.subject&&Date.now()-cached.updated_at<SOCIAL_CACHE_MS){
+  try{
+   const payload=JSON.parse(cached.payload);
+   const history=await env.DB.prepare('SELECT date,metrics FROM social_metric_snapshots WHERE client_hash=? AND provider=? AND subject=? ORDER BY date DESC LIMIT 45').bind(clientHash,provider,row.subject).all();
+   return json({...payload,history:(history.results||[]).reverse().map(x=>({date:x.date,metrics:JSON.parse(x.metrics)})),updatedAt:cached.updated_at,fromCache:true});
+  }catch{}
+ }
+ let details;
+ try{details=await socialDetails(provider,await decrypted(env,active.token_enc),env)}
+ catch(e){console.warn('VIVER social overview failed',provider,e.message);return json({error:['social_token_expired','social_access_denied','social_rate_limited'].includes(e.message)?e.message:'social_provider_unavailable'},
+  e.message==='social_token_expired'?401:e.message==='social_access_denied'?403:e.message==='social_rate_limited'?429:503)}
+ if(String(details.account?.id)!==String(row.subject))return json({error:'social_account_changed'},409);
+ const now=Date.now(),payload={provider,...details};
+ await env.DB.prepare('INSERT INTO social_overview_cache(client_hash,provider,subject,payload,updated_at) VALUES(?,?,?,?,?) ON CONFLICT(client_hash,provider) DO UPDATE SET subject=excluded.subject,payload=excluded.payload,updated_at=excluded.updated_at').bind(clientHash,provider,row.subject,JSON.stringify(payload),now).run();
+ await env.DB.prepare('INSERT INTO social_metric_snapshots(client_hash,provider,subject,date,metrics,updated_at) VALUES(?,?,?,?,?,?) ON CONFLICT(client_hash,provider,subject,date) DO UPDATE SET metrics=excluded.metrics,updated_at=excluded.updated_at').bind(clientHash,provider,row.subject,new Date(now).toISOString().slice(0,10),JSON.stringify(details.metrics),now).run();
+ const h=await env.DB.prepare('SELECT date,metrics FROM social_metric_snapshots WHERE client_hash=? AND provider=? AND subject=? ORDER BY date DESC LIMIT 45').bind(clientHash,provider,row.subject).all();
+ return json({...payload,history:(h.results||[]).reverse().map(x=>({date:x.date,metrics:JSON.parse(x.metrics)})),updatedAt:now,fromCache:false});
+}
+
 async function connections(req,env){
  const token=authHeader(req);if(!token)return json({error:'Connection key required'},401);
  const clientHash=await hash(token);
@@ -472,6 +603,8 @@ async function disconnect(req,env,provider){
   await env.DB.prepare('DELETE FROM youtube_analytics_cache WHERE client_hash=?').bind(hashKey).run();
   await env.DB.prepare('DELETE FROM youtube_video_cache WHERE client_hash=?').bind(hashKey).run();
  }
+ await env.DB.prepare('DELETE FROM social_overview_cache WHERE client_hash=? AND provider=?').bind(hashKey,provider).run();
+ await env.DB.prepare('DELETE FROM social_metric_snapshots WHERE client_hash=? AND provider=?').bind(hashKey,provider).run();
  await env.DB.prepare('DELETE FROM oauth_accounts WHERE client_hash=? AND provider=?').bind(hashKey,provider).run();
  return json({ok:true});
 }
@@ -486,6 +619,8 @@ export default {
    if(method==='GET'&&path==='/connections')return connections(req,env);
    if(method==='GET'&&path==='/youtube/stats')return youtubeStats(req,env);
    if(method==='GET'&&path==='/youtube/analytics')return youtubeAnalytics(req,env);
+   const socialMatch=/^\/social\/(twitch|tiktok|x)\/overview$/.exec(path);
+   if(method==='GET'&&socialMatch)return socialOverview(req,env,socialMatch[1]);
    if(method==='GET'&&path==='/youtube/videos')return youtubeVideoLibrary(req,env);
    if(method==='GET'&&path==='/youtube/videos/compare')return youtubeVideoCompare(req,env);
    const retention=/^\/youtube\/videos\/([A-Za-z0-9_-]{11})\/retention$/.exec(path);
