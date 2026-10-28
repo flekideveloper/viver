@@ -109,6 +109,6 @@
  window.addEventListener('focus',()=>{if(Date.now()-lastRefresh>4000)refresh()});
  window.addEventListener('hashchange',()=>{if(location.hash==='#platforms')refresh()});
  $('#language')?.addEventListener('change',render);
- window.VIVERConnections={refresh,request,getConnections:()=>fields.connections.map(x=>({...x})),getStatus:()=>status};
+ window.VIVERConnections={refresh,request,start,getConnections:()=>fields.connections.map(x=>({...x})),getStatus:()=>status};
  render();refresh();
 })();
