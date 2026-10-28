@@ -6,7 +6,7 @@
 const SITE = 'https://flekideveloper.github.io';
 const HOME = SITE + '/viver/#platforms';
 const PROVIDERS = {
-  youtube: {id:'GOOGLE_CLIENT_ID',secret:'GOOGLE_CLIENT_SECRET',scope:'https://www.googleapis.com/auth/youtube.readonly',
+  youtube: {id:'GOOGLE_CLIENT_ID',secret:'GOOGLE_CLIENT_SECRET',scope:'https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/yt-analytics.readonly',
     authorize:'https://accounts.google.com/o/oauth2/v2/auth',token:'https://oauth2.googleapis.com/token'},
   tiktok: {id:'TIKTOK_CLIENT_KEY',secret:'TIKTOK_CLIENT_SECRET',scope:'user.info.basic',
     authorize:'https://www.tiktok.com/v2/auth/authorize/',token:'https://open.tiktokapis.com/v2/oauth/token/'},
@@ -122,6 +122,7 @@ async function callback(req,env,provider){
   if(provider==='youtube'&&old?.subject&&old.subject!==profile.id){
    await env.DB.prepare('DELETE FROM youtube_cache WHERE client_hash=?').bind(pending.client_hash).run();
    await env.DB.prepare('DELETE FROM youtube_snapshots WHERE client_hash=?').bind(pending.client_hash).run();
+   await env.DB.prepare('DELETE FROM youtube_analytics_cache WHERE client_hash=?').bind(pending.client_hash).run();
   }
   await env.DB.prepare('INSERT INTO oauth_accounts(client_hash,provider,subject,label,avatar,token_enc,refresh_enc,expires_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?) ON CONFLICT(client_hash,provider) DO UPDATE SET subject=excluded.subject,label=excluded.label,avatar=excluded.avatar,token_enc=excluded.token_enc,refresh_enc=excluded.refresh_enc,expires_at=excluded.expires_at,updated_at=excluded.updated_at')
     .bind(pending.client_hash,provider,profile.id,profile.name.slice(0,120),profile.avatar.slice(0,500),access,refresh||old?.refresh_enc||null,expires,now).run();
@@ -236,6 +237,112 @@ async function youtubeStats(req,env){
   .bind(clientHash,channel.id,new Date(now).toISOString().slice(0,10),snapshot.totals.views??0,snapshot.totals.subscribers,snapshot.totals.videos??0,now).run();
  return json({...snapshot,history:await readYouTubeHistory(env,clientHash,channel.id),updatedAt:now,fromCache:false});
 }
+
+/* YouTube Analytics: real period metrics and discovery reports. No inferred historical data. */
+const ANALYTICS_TTL=15*60*1000;
+const REPORT_METRICS=['views','likes','comments','shares','subscribersGained','subscribersLost','estimatedMinutesWatched'];
+const ALLOWED_STATS=new Set(REPORT_METRICS);
+function dateUTC(offsetDays){const d=new Date();d.setUTCHours(12,0,0,0);d.setUTCDate(d.getUTCDate()+offsetDays);return d.toISOString().slice(0,10)}
+function dateShift(iso,n){const d=new Date(iso+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)}
+function metricNumber(v){const n=Number(v);return Number.isFinite(n)&&n>=0?n:0}
+function reportRows(result){
+ const head=(result.columnHeaders||[]).map(x=>x.name);
+ return (result.rows||[]).map(row=>Object.fromEntries(head.map((name,i)=>[name,row[i]])));
+}
+async function analyticsQuery(accessToken,params){
+ const u=new URL('https://youtubeanalytics.googleapis.com/v2/reports');
+ const options={ids:'channel==MINE',...params};
+ Object.entries(options).forEach(([key,value])=>u.searchParams.set(key,String(value)));
+ const res=await fetch(u.toString(),{headers:{Authorization:'Bearer '+accessToken}});
+ if(!res.ok){
+  const data=await res.json().catch(()=>({}));
+  const code=String(data.error?.message||'').toLowerCase();
+  if(res.status===401||res.status===403&&(/scope|permission|insufficient authentication/.test(code)))
+   throw Error('youtube_analytics_permission');
+  if(res.status===403&&/not been used|disabled|enable the api|access not configured/.test(code))
+   throw Error('youtube_analytics_api_disabled');
+  if(res.status===403)throw Error('youtube_analytics_denied');
+  throw Error('youtube_analytics_unavailable');
+ }
+ return reportRows(await res.json());
+}
+function sumReport(rows,keys){
+ const totals=Object.fromEntries(keys.map(x=>[x,0]));
+ for(const r of rows)for(const key of keys)totals[key]+=metricNumber(r[key]);
+ totals.netSubscribers=totals.subscribersGained-totals.subscribersLost;
+ return totals;
+}
+function changePct(current,previous){return previous>0?Math.round(((current-previous)/previous)*1000)/10:null}
+function trafficLabel(type){return String(type||'').slice(0,65)}
+async function youtubeAnalytics(req,env){
+ const capability=authHeader(req);if(!capability)return json({error:'Connection key required'},401);
+ if(!config(env,'youtube'))return json({error:'youtube_not_configured'},409);
+ const clientHash=await hash(capability);
+ const row=await env.DB.prepare('SELECT * FROM oauth_accounts WHERE client_hash=? AND provider=?').bind(clientHash,'youtube').first();
+ if(!row)return json({error:'youtube_not_connected'},404);
+ const active=await refreshIfNeeded(env,row);
+ if(active.expired)return json({error:'youtube_reconnect_required'},401);
+ const now=Date.now();
+ const cached=await env.DB.prepare('SELECT channel_id,payload,updated_at FROM youtube_analytics_cache WHERE client_hash=?').bind(clientHash).first();
+ if(cached&&cached.channel_id===row.subject&&now-cached.updated_at<ANALYTICS_TTL){
+  try{return json({...JSON.parse(cached.payload),updatedAt:cached.updated_at,fromCache:true})}catch{}
+ }
+ let accessToken;
+ try{accessToken=await decrypted(env,active.token_enc)}
+ catch{return json({error:'youtube_reconnect_required'},401)}
+ const params={startDate:dateUTC(-23),endDate:dateUTC(-1),metrics:REPORT_METRICS.join(','),dimensions:'day',sort:'day'};
+ let daily;
+ try{daily=await analyticsQuery(accessToken,params)}
+ catch(e){
+  const known=['youtube_analytics_permission','youtube_analytics_api_disabled','youtube_analytics_denied','youtube_analytics_unavailable'];
+  const code=known.includes(e.message)?e.message:'youtube_analytics_unavailable';
+  return json({error:code},code==='youtube_analytics_permission'?403:503);
+ }
+ // YouTube omits the newest days until processing is finished; anchor on its last reported day.
+ const dates=daily.filter(x=>/^\d{4}-\d{2}-\d{2}$/.test(String(x.day||''))).sort((a,b)=>a.day.localeCompare(b.day));
+ const end=dates.length?dates.at(-1).day:null;
+ if(!end)return json({empty:true,reason:'youtube_analytics_no_data',channel:{id:row.subject,label:row.label},period:null,updatedAt:now});
+ const start=dateShift(end,-6),priorEnd=dateShift(end,-7),priorStart=dateShift(end,-13);
+ const currentRows=dates.filter(x=>x.day>=start&&x.day<=end);
+ const priorRows=dates.filter(x=>x.day>=priorStart&&x.day<=priorEnd);
+ const current=sumReport(currentRows,REPORT_METRICS),previous=sumReport(priorRows,REPORT_METRICS);
+ // For a recently created channel no prior-day rows might exist. Do not display a made-up percentage.
+ const comparisonAvailable=priorRows.length>0;
+ const growth={
+  views:comparisonAvailable?changePct(current.views,previous.views):null,
+  subscribersGained:comparisonAvailable?changePct(current.subscribersGained,previous.subscribersGained):null
+ };
+ const base={startDate:start,endDate:end};
+ const baseSources={...base,metrics:'views',dimensions:'insightTrafficSourceType',sort:'-views',maxResults:15};
+ const findTerms={...base,metrics:'views',dimensions:'insightTrafficSourceDetail',filters:'insightTrafficSourceType==YT_SEARCH',sort:'-views',maxResults:10};
+ const sourcePromises=[
+  analyticsQuery(accessToken,baseSources),
+  analyticsQuery(accessToken,findTerms),
+  analyticsQuery(accessToken,{...base,metrics:'views',dimensions:'deviceType',sort:'-views',maxResults:7}),
+  analyticsQuery(accessToken,{...base,metrics:'views',dimensions:'country',sort:'-views',maxResults:7})
+ ];
+ const sections=await Promise.allSettled(sourcePromises);
+ const get=(i)=>sections[i].status==='fulfilled'?sections[i].value:[];
+ const traffic=get(0).map(x=>({type:trafficLabel(x.insightTrafficSourceType),views:metricNumber(x.views)})).filter(x=>x.views>0).slice(0,8);
+ const searchTerms=get(1).map(x=>({term:String(x.insightTrafficSourceDetail||'').slice(0,120),views:metricNumber(x.views)})).filter(x=>x.term&&x.views>0).slice(0,8);
+ const devices=get(2).map(x=>({type:String(x.deviceType||'').slice(0,60),views:metricNumber(x.views)})).filter(x=>x.views>0).slice(0,6);
+ const countries=get(3).map(x=>({code:String(x.country||'').slice(0,3),views:metricNumber(x.views)})).filter(x=>x.views>0).slice(0,6);
+ const payload={
+  channel:{id:row.subject,label:row.label},
+  period:{start,end,comparisonStart:priorStart,comparisonEnd:priorEnd,comparisonAvailable,latestCompleteDay:end},
+  current,previous:comparisonAvailable?previous:null,growth,
+  daily:currentRows.map(x=>({date:x.day,views:metricNumber(x.views),subscribersGained:metricNumber(x.subscribersGained)})),
+  traffic,searchTerms,devices,countries,
+  availability:{
+   traffic:sections[0].status==='fulfilled',searchTerms:sections[1].status==='fulfilled',
+   devices:sections[2].status==='fulfilled',countries:sections[3].status==='fulfilled'
+  }
+ };
+ await env.DB.prepare('INSERT INTO youtube_analytics_cache(client_hash,channel_id,payload,updated_at) VALUES(?,?,?,?) ON CONFLICT(client_hash) DO UPDATE SET channel_id=excluded.channel_id,payload=excluded.payload,updated_at=excluded.updated_at')
+ .bind(clientHash,row.subject,JSON.stringify(payload),now).run();
+ return json({...payload,updatedAt:now,fromCache:false});
+}
+
 async function connections(req,env){
  const token=authHeader(req);if(!token)return json({error:'Connection key required'},401);
  const clientHash=await hash(token);
@@ -254,6 +361,7 @@ async function disconnect(req,env,provider){
  if(provider==='youtube'){
   await env.DB.prepare('DELETE FROM youtube_cache WHERE client_hash=?').bind(hashKey).run();
   await env.DB.prepare('DELETE FROM youtube_snapshots WHERE client_hash=?').bind(hashKey).run();
+  await env.DB.prepare('DELETE FROM youtube_analytics_cache WHERE client_hash=?').bind(hashKey).run();
  }
  await env.DB.prepare('DELETE FROM oauth_accounts WHERE client_hash=? AND provider=?').bind(hashKey,provider).run();
  return json({ok:true});
@@ -268,6 +376,7 @@ export default {
    if(method==='GET'&&path==='/health')return json({ok:true,providers:allConfigs(env),frontend:SITE+'/viver/'});
    if(method==='GET'&&path==='/connections')return connections(req,env);
    if(method==='GET'&&path==='/youtube/stats')return youtubeStats(req,env);
+   if(method==='GET'&&path==='/youtube/analytics')return youtubeAnalytics(req,env);
    const connect=/^\/auth\/start\/(youtube|tiktok|twitch|x)$/.exec(path);
    if(method==='POST'&&connect)return start(req,env,connect[1]);
    const callbackMatch=/^\/auth\/callback\/(youtube|tiktok|twitch|x)$/.exec(path);
