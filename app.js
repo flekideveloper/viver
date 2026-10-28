@@ -214,7 +214,7 @@ function addNote(position){
  const x=position?.x??(scroll.scrollLeft+scroll.clientWidth/2)/zoom-107;
  const y=position?.y??(scroll.scrollTop+scroll.clientHeight/2)/zoom-100;
  const z=Math.max(0,...state.notes.map(n=>n.z))+1;
- const n={id:uid(),text:'',color:noteColor,x:Math.round(clamp(x,8,1345)),y:Math.round(clamp(y,8,750)),z,group:'',link:'',image:'',links:[]};
+ const n={id:uid(),text:'',color:noteColor,x:Math.round(clamp(x,8,1345)),y:Math.round(clamp(y,8,750)),z,group:window.VIVERExtras?.getActiveGroup?.()||'',link:'',image:'',links:[]};
  state.notes.push(n);save();renderBoard();renderHome();
  layer.querySelector('[data-note="'+n.id+'"] textarea')?.focus();
 }
@@ -231,7 +231,11 @@ layer.addEventListener('change',ev=>{
 });
 layer.addEventListener('click',ev=>{
  const remove=ev.target.closest('[data-remove]');
- if(remove){state.notes=state.notes.filter(n=>n.id!==remove.dataset.remove);save();renderBoard();renderHome();return}
+ if(remove){
+  state.notes=state.notes.filter(n=>n.id!==remove.dataset.remove);
+  for(const n of state.notes){if(Array.isArray(n.links))n.links=n.links.filter(id=>id!==remove.dataset.remove)}
+  save();renderBoard();renderHome();return
+ }
  const copy=ev.target.closest('[data-copy]');
  if(copy){const n=state.notes.find(n=>n.id===copy.dataset.copy);if(!n)return;
   state.notes.push({...n,id:uid(),x:clamp(n.x+30,0,1345),y:clamp(n.y+30,0,750),links:[],z:Math.max(...state.notes.map(x=>x.z))+1});
@@ -295,7 +299,7 @@ function renderSearch(){
  const arr=[
  ...state.plans.filter(p=>p.title.toLowerCase().includes(q)||p.notes.toLowerCase().includes(q)||(p.checks||[]).some(ch=>ch.text.toLowerCase().includes(q))).slice(0,10).map(p=>({id:p.id,title:p.title,kind:t('planner'),target:'planner'})),
  ...state.reminders.filter(r=>r.title.toLowerCase().includes(q)).slice(0,10).map(r=>({id:r.id,title:r.title,kind:t('reminders'),target:'reminders'})),
- ...state.notes.filter(n=>n.text.toLowerCase().includes(q)).slice(0,10).map(n=>({title:n.text||t('emptyNote'),kind:t('board'),target:'board',note:n.id}))
+ ...state.notes.filter(n=>n.text.toLowerCase().includes(q)||String(n.group||'').toLowerCase().includes(q)).slice(0,10).map(n=>({title:n.text||t('emptyNote'),kind:t('board'),target:'board',note:n.id}))
  ].slice(0,25);
  $('#search-results').innerHTML=arr.length?arr.map(a=>'<button class="search-result" type="button" data-search-target="'+a.target+'" data-search-note="'+esc(a.note||'')+'" data-search-id="'+esc(a.id||'')+'"><span>'+esc(a.title.slice(0,130))+'</span><small>'+esc(a.kind)+'</small></button>').join(''):empty('noResults');
 }
