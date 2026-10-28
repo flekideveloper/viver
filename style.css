@@ -215,3 +215,26 @@ dialog{background:var(--card);border:1px solid var(--border);color:var(--text);b
 #page-reminders .page-title{flex-wrap:wrap}
 @media(min-width:861px){.topbar-left>strong{display:none}}
 @media(max-width:640px){.page-title .row-buttons{flex-wrap:wrap}.page-title #reminder-new-top{order:1}.page-title #enable-alerts{order:2}.planner-header{width:100%}.planner-header #plan-new-top{flex:0 0 auto}.workspace-grid .list-panel{padding:16px}.theme-grid{gap:8px}.overview-stats .stat{min-height:113px}.overview-stats .stat strong{font-size:27px}.note-details-dialog{padding:18px}}
+
+
+/* OAuth links: real authorization only, no decorative profile placeholders */
+#page-platforms .connections-panel{margin-bottom:15px;max-width:950px;padding:20px 22px}
+.connections-panel .panel-title{margin-bottom:14px}
+.connections-panel .panel-title h2{font-size:14px}
+.connection-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:22px;row-gap:0}
+.account-link-row{display:flex;align-items:center;gap:12px;padding:12px 0;min-width:0;border-top:1px solid var(--border)}
+.account-link-row:nth-child(-n+2){border-top:0}
+.account-brand{width:36px;height:36px;flex:none;display:grid;place-items:center;border-radius:9px;color:#fff;font-weight:750;font-size:18px}
+.account-brand.account-youtube{background:#aa3333}
+.account-brand.account-tiktok{background:#232327;text-shadow:1px 1px #d44860,-1px -1px #4eb7b2}
+.account-brand.account-twitch{background:#6743a2}
+.account-brand.account-x{background:#141418}
+.account-link-details{display:flex;flex:1;flex-direction:column;gap:3px;min-width:0}
+.account-link-details strong{font-size:12px;font-weight:650}
+.account-link-status{font-size:11px;color:var(--sub);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;max-width:100%}
+.account-link-status.linked{color:#a0d5b4}
+.account-action{font-size:11px;min-height:32px;padding:5px 10px;max-width:150px}
+.account-action:disabled{cursor:not-allowed;opacity:.55}
+.connection-info{margin:12px 0 0;color:var(--hint);font-size:11px;line-height:1.6}
+#page-platforms .analytics-panel{margin-top:0}
+@media(max-width:680px){.connection-grid{grid-template-columns:1fr}.account-link-row:nth-child(2){border-top:1px solid var(--border)}#page-platforms .connections-panel{padding:18px}.account-action{min-width:103px}.account-link-row{gap:9px}}
