@@ -165,7 +165,7 @@ const vm=require('node:vm');
  assert.equal($('.account-icon'),null,'fake account badge removed');
  assert($('#analytics-chart').textContent.includes('200'),'latest imported metric shown');
  // Real YouTube stats UI is shown only for linked account; never leaks token in page source.
- let connectedYouTube=false,youtubeApiCalls=0;
+ let connectedYouTube=false,youtubeApiCalls=0,overviewApiCalls=0,overviewFail=false;
  const youtubeFixture={
   channel:{id:'UCabcdefghijklmnopqrstuv',title:'My Creator Channel',description:'Test description',avatar:'https://example.com/pic.jpg',hiddenSubscribers:false},
   totals:{views:12345,subscribers:987,videos:12},
@@ -173,12 +173,24 @@ const vm=require('node:vm');
   history:[{date:'2026-10-27',views:12000,subscribers:980,videos:11},{date:'2026-10-28',views:12345,subscribers:987,videos:12}],
   updatedAt:Date.now()
  };
+ const overviewFixture={
+  channel:{id:'UCabcdefghijklmnopqrstuv',label:'My Creator Channel'},
+  period:{start:'2026-10-21',end:'2026-10-27',comparisonStart:'2026-10-14',comparisonEnd:'2026-10-20',comparisonAvailable:true},
+  current:{views:1400,subscribersGained:21,subscribersLost:7,netSubscribers:14,likes:77,comments:21,shares:7,estimatedMinutesWatched:4200},
+  previous:{views:700,subscribersGained:14,subscribersLost:7,netSubscribers:7},
+  growth:{views:100,subscribersGained:50},
+  daily:[{date:'2026-10-21',views:100},{date:'2026-10-22',views:200},{date:'2026-10-23',views:100},{date:'2026-10-24',views:250},{date:'2026-10-25',views:250},{date:'2026-10-26',views:250},{date:'2026-10-27',views:250}],
+  traffic:[{type:'YT_SEARCH',views:450},{type:'SHORTS',views:350}],searchTerms:[{term:'editing tutorial',views:200}],
+  devices:[{type:'MOBILE',views:900}],countries:[{code:'UA',views:800}],updatedAt:Date.now()
+ };
  window.fetch=async url=>{
   if(String(url).endsWith('/connections'))return {ok:true,json:async()=>({providers:{youtube:true,tiktok:false,twitch:false,x:false},connections:connectedYouTube?[{provider:'youtube',connected:true,label:'My Creator Channel'}]:[]})};
   if(String(url).endsWith('/youtube/stats')){youtubeApiCalls++;return {ok:true,json:async()=>youtubeFixture}}
+  if(String(url).endsWith('/youtube/analytics')){overviewApiCalls++;return overviewFail?{ok:false,status:403,json:async()=>({error:'youtube_analytics_permission'})}:{ok:true,json:async()=>overviewFixture}}
   throw Error('Unexpected API path '+url);
  };
  vm.runInContext(read('youtube.js'),context,{filename:'youtube.js'});
+ vm.runInContext(read('overview-analytics.js'),context,{filename:'overview-analytics.js'});
  click('[data-page="platforms"]');
  await window.VIVERConnections.refresh();
  await new Promise(r=>setTimeout(r,15));
@@ -200,6 +212,24 @@ const vm=require('node:vm');
  connectedYouTube=false;
  await window.VIVERConnections.refresh();
  assert.equal($('#youtube-live-panel').hidden,true,'disconnect hides YouTube statistics');
+ click('[data-page="home"]');
+ await new Promise(r=>setTimeout(r,15));
+ assert($('#creator-overview-content').textContent.includes('Підключи'),'unconnected accounts show honest empty-state text');
+ assert.equal(overviewApiCalls,0,'dashboard never requests private metrics without a linked account');
+ connectedYouTube=true;await window.VIVERConnections.refresh();
+ await new Promise(r=>setTimeout(r,65));
+ assert($('#creator-overview-content').textContent.includes('1 400')||$('#creator-overview-content').textContent.includes('1,400'),'true 7-day views shown in overview');
+ assert($('#creator-overview-content').textContent.includes('+100%'),'weekly view growth shown');
+ assert($('#creator-overview-content').textContent.includes('+50%'),'new subscriber growth shown');
+ assert($('#creator-overview-content').textContent.includes('editing tutorial'),'search discovery term shown');
+ assert($('#creator-overview-content').textContent.includes('Телефони'),'device name localized');
+ assert.equal(overviewApiCalls,1,'weekly API fetched once on overview');
+ connectedYouTube=false;await window.VIVERConnections.refresh();
+ assert(!$('#creator-overview-content').textContent.includes('editing tutorial'),'disconnect immediately hides analytics history');
+ connectedYouTube=true;overviewFail=true;await window.VIVERConnections.refresh();
+ await new Promise(r=>setTimeout(r,65));
+ assert($('#creator-overview-content').textContent.includes('дозвіл Google'),'missing analytics permissions explained');
+ assert($('#creator-overview-content').querySelector('[data-creator-reauthorize]'),'explicit reauthorization action shown');
  const saved=JSON.parse(window.localStorage.getItem('viver-workspace-v1'));
  assert.equal(saved.plans[0].checks[0].text,'Make thumbnail','checklist persisted');
  assert.equal(saved.reminders.find(x=>x.id===recurring.id).repeat,'weekly','recurrence persisted');
