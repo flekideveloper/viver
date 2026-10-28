@@ -17,7 +17,7 @@
  }
  function render(){
   if(!linked()){panel.hidden=true;model=null;lastFetch=0;wasConnected=false;errorMessage='';return}
-  panel.hidden=false;
+  panel.hidden=!!window.VIVERPlatformHub&&window.VIVERPlatformHub.getSelected()!=='youtube';
   $('#youtube-section-title').textContent=tr('Мій канал','My channel');
   $('#youtube-refresh-text').textContent=tr('Оновити','Refresh');
   button.disabled=loading;
