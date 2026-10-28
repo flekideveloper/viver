@@ -31,7 +31,7 @@ function normalise(d){
  const s=fresh();if(!d||typeof d!=='object'||Array.isArray(d))return s;
  s.theme=d.theme==='light'?'light':'dark';s.language=d.language==='en'?'en':'uk';
  if(Array.isArray(d.plans))s.plans=d.plans.slice(0,500).filter(p=>p&&typeof p.title==='string'&&validDate(p.date)).map(p=>({id:String(p.id||uid()).slice(0,90),title:p.title.slice(0,110),date:p.date,platform:['youtube','tiktok','twitch','x','other'].includes(p.platform)?p.platform:'other',status:['idea','draft','script','record','edit','ready','published'].includes(p.status)?p.status:'idea',notes:String(p.notes||'').slice(0,350),checks:Array.isArray(p.checks)?p.checks.slice(0,60).filter(c=>c&&typeof c.text==='string').map(c=>({id:String(c.id||uid()).slice(0,90),text:c.text.slice(0,120),done:!!c.done})):[],created:Number(p.created)||Date.now()}));
- if(Array.isArray(d.reminders))s.reminders=d.reminders.slice(0,500).filter(r=>r&&typeof r.title==='string'&&validDate(r.due)).map(r=>({id:String(r.id||uid()).slice(0,90),title:r.title.slice(0,110),due:r.due,priority:['low','normal','high'].includes(r.priority)?r.priority:'normal',repeat:['none','daily','weekly','monthly','weekdays'].includes(r.repeat)?r.repeat:'none',weekdays:Array.isArray(r.weekdays)?r.weekdays.filter(n=>Number.isInteger(n)&&n>=0&&n<=6).slice(0,7):[],done:!!r.done,notified:!!r.notified,created:Number(r.created)||Date.now()}));
+ if(Array.isArray(d.reminders))s.reminders=d.reminders.slice(0,500).filter(r=>r&&typeof r.title==='string'&&validDate(r.due)).map(r=>({id:String(r.id||uid()).slice(0,90),title:r.title.slice(0,110),due:r.due,priority:['low','normal','high'].includes(r.priority)?r.priority:'normal',repeat:['none','daily','weekly','monthly','weekdays'].includes(r.repeat)?r.repeat:'none',weekdays:Array.isArray(r.weekdays)?r.weekdays.filter(n=>Number.isInteger(n)&&n>=0&&n<=6).slice(0,7):[],anchorDay:Number.isInteger(r.anchorDay)&&r.anchorDay>=1&&r.anchorDay<=31?r.anchorDay:new Date(r.due).getDate(),done:!!r.done,notified:!!r.notified,created:Number(r.created)||Date.now()}));
  if(Array.isArray(d.notes))s.notes=d.notes.slice(0,300).filter(n=>n&&typeof n.id==='string').map(n=>({id:n.id.slice(0,90),text:String(n.text||'').slice(0,3000),color:COLORS[n.color]?n.color:'yellow',x:clamp(Number(n.x)||0,0,1345),y:clamp(Number(n.y)||0,0,750),z:clamp(Number(n.z)||1,1,9999999),group:String(n.group||'').slice(0,36),link:/^https:\/\//i.test(String(n.link||''))?String(n.link).slice(0,500):'',image:typeof n.image==='string'&&/^data:image\/(?:png|jpeg|webp);base64,/i.test(n.image)&&n.image.length<330000?n.image:'',links:Array.isArray(n.links)?n.links.filter(v=>typeof v==='string').slice(0,12):[]}));
  if(Array.isArray(d.analytics))s.analytics=d.analytics.slice(0,1000).filter(r=>r&&['youtube','tiktok','twitch','x'].includes(r.platform)&&/^\d{4}-\d{2}-\d{2}$/.test(r.date)).map(r=>({platform:r.platform,date:r.date,views:metricValue(r.views),followers:metricValue(r.followers),likes:metricValue(r.likes),comments:metricValue(r.comments),shares:metricValue(r.shares)}));
  return s;
@@ -53,7 +53,7 @@ function lang(){
  $('#language').value=state.language;
  $('#page-heading').textContent=t(page);
  $('#today').textContent=new Date().toLocaleDateString(state.language==='uk'?'uk-UA':'en-US',{day:'numeric',month:'long',year:'numeric'});
- renderHome();renderPlans();renderReminders();renderBoard();
+ renderHome();renderPlans();renderReminders();renderBoard();window.VIVERExtras?.translate?.();
 }
 function theme(){
  document.documentElement.dataset.theme=state.theme;
@@ -117,6 +117,7 @@ function renderPlans(){
  const filtered=state.plans.filter(p=>filter==='all'||p.status===filter).sort((a,b)=>timeMs(a.date)-timeMs(b.date));
  $('#plan-count').textContent=state.plans.length+'';
  $('#plan-list').innerHTML=filtered.length?filtered.map(p=>'<div class="list-item"><div class="list-item-info"><strong>'+esc(p.title)+'</strong><small>'+esc(p.platform.toUpperCase())+' · '+esc(dateFmt(p.date))+(p.notes?' · '+esc(p.notes):'')+'</small></div><select class="stage-select" aria-label="'+esc(t('stage'))+'" data-plan-stage="'+esc(p.id)+'">'+['idea','draft','script','record','edit','ready','published'].map(k=>'<option value="'+k+'"'+(k===p.status?' selected':'')+'>'+esc(stageLabel(k))+'</option>').join('')+'</select><div class="item-actions"><button type="button" data-plan-edit="'+esc(p.id)+'" title="'+esc(t('edit'))+'" aria-label="'+esc(t('edit'))+'">'+icon('edit')+'</button><button type="button" class="delete" data-plan-delete="'+esc(p.id)+'" title="'+esc(t('remove'))+'" aria-label="'+esc(t('remove'))+'">'+icon('trash')+'</button></div></div>').join(''):empty('noPlans');
+ window.VIVERExtras?.onPlansRendered?.();
 }
 $('#plan-filter').addEventListener('change',renderPlans);
 $('#plan-list').addEventListener('change',ev=>{
@@ -136,7 +137,7 @@ $('#plan-list').addEventListener('click',ev=>{
 $('#reminder-form').addEventListener('submit',ev=>{
  ev.preventDefault();const title=$('#reminder-title').value.trim(),due=$('#reminder-due').value;if(!title||!validDate(due))return;
  const existing=state.reminders.find(r=>r.id===editingReminder);
- const record={title:title.slice(0,110),due,priority:$('#reminder-priority').value,repeat:$('#reminder-repeat').value,weekdays:$('#reminder-weekdays input:checked').map(x=>Number(x.value))};
+ const record={title:title.slice(0,110),due,priority:$('#reminder-priority').value,repeat:$('#reminder-repeat').value,weekdays:$('#reminder-weekdays input:checked').map(x=>Number(x.value)),anchorDay:new Date(due).getDate()};
  if(existing){Object.assign(existing,record);existing.notified=false}else state.reminders.push({...record,id:uid(),done:false,notified:false,created:Date.now()});
  save();clearReminder();renderReminders();renderHome();toast(t(existing?'updated':'created'));
 });
@@ -144,6 +145,7 @@ function renderReminders(){
  $$('#reminder-tabs [data-filter]').forEach(b=>b.classList.toggle('active',b.dataset.filter===reminderFilter));
  const filtered=state.reminders.filter(r=>reminderFilter==='all'||(reminderFilter==='done'?r.done:!r.done)).sort((a,b)=>Number(a.done)-Number(b.done)||timeMs(a.due)-timeMs(b.due));
  $('#reminder-list').innerHTML=filtered.length?filtered.map(r=>'<div class="list-item '+(r.done?'item-done':'')+'"><button type="button" class="check-box '+(r.done?'checked':'')+'" data-reminder-toggle="'+esc(r.id)+'" aria-label="'+esc(r.done?t('open'):t('done'))+'">'+icon('check')+'</button><div class="list-item-info"><strong>'+esc(r.title)+'</strong><small class="'+(!r.done&&timeMs(r.due)<Date.now()?'overdue':'')+'">'+esc(dateFmt(r.due))+' · '+esc(t(r.priority))+'</small></div><div class="item-actions"><button type="button" data-reminder-edit="'+esc(r.id)+'" title="'+esc(t('edit'))+'" aria-label="'+esc(t('edit'))+'">'+icon('edit')+'</button><button type="button" class="delete" data-reminder-delete="'+esc(r.id)+'" title="'+esc(t('remove'))+'" aria-label="'+esc(t('remove'))+'">'+icon('trash')+'</button></div></div>').join(''):empty('noReminders');
+ window.VIVERExtras?.onRemindersRendered?.();
 }
 $$('#reminder-tabs [data-filter]').forEach(b=>b.addEventListener('click',()=>{reminderFilter=b.dataset.filter;renderReminders()}));
 $('#reminder-list').addEventListener('click',ev=>{
@@ -195,7 +197,7 @@ function addNote(position){
  const x=position?.x??(scroll.scrollLeft+scroll.clientWidth/2)/zoom-107;
  const y=position?.y??(scroll.scrollTop+scroll.clientHeight/2)/zoom-100;
  const z=Math.max(0,...state.notes.map(n=>n.z))+1;
- const n={id:uid(),text:'',color:noteColor,x:Math.round(clamp(x,8,1345)),y:Math.round(clamp(y,8,750)),z};
+ const n={id:uid(),text:'',color:noteColor,x:Math.round(clamp(x,8,1345)),y:Math.round(clamp(y,8,750)),z,group:'',link:'',image:'',links:[]};
  state.notes.push(n);save();renderBoard();renderHome();
  layer.querySelector('[data-note="'+n.id+'"] textarea')?.focus();
 }
@@ -215,7 +217,7 @@ layer.addEventListener('click',ev=>{
  if(remove){state.notes=state.notes.filter(n=>n.id!==remove.dataset.remove);save();renderBoard();renderHome();return}
  const copy=ev.target.closest('[data-copy]');
  if(copy){const n=state.notes.find(n=>n.id===copy.dataset.copy);if(!n)return;
-  state.notes.push({...n,id:uid(),x:clamp(n.x+30,0,1345),y:clamp(n.y+30,0,750),z:Math.max(...state.notes.map(x=>x.z))+1});
+  state.notes.push({...n,id:uid(),x:clamp(n.x+30,0,1345),y:clamp(n.y+30,0,750),links:[],z:Math.max(...state.notes.map(x=>x.z))+1});
   save();renderBoard();renderHome()}
 });
 layer.addEventListener('pointerdown',ev=>{
