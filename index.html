@@ -8,12 +8,13 @@
 <meta name="description" content="VIVER — простір для ідей, планування контенту та нагадувань.">
 <title>VIVER</title>
 <link rel="icon" href="./favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="./style.css?v=8">
+<link rel="stylesheet" href="./style.css?v=9">
 <script defer src="./app.js?v=7"></script>
 <script defer src="./features.js?v=7"></script>
 <script defer src="./connections.js?v=3"></script>
 <script defer src="./youtube.js?v=2"></script>
-<script defer src="./overview-analytics.js?v=1"></script>
+<script defer src="./overview-analytics.js?v=2"></script>
+<script defer src="./creator-studio.js?v=1"></script>
 </head>
 <body>
 <svg class="sprites" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
@@ -69,6 +70,7 @@
     </div>
     <div id="creator-overview-content" aria-live="polite" class="creator-overview-content"></div>
    </section>
+   <section class="creator-home-tools" id="creator-home-tools" hidden aria-label="Цілі й сповіщення"><div id="creator-home-goals"></div><div id="creator-home-alerts"></div></section>
    <div class="overview-grid">
     <div class="panel"><div class="panel-title"><h2 data-t="upcoming">Найближче</h2><button class="text-button" type="button" data-goto="reminders" data-t="viewAll">Усі</button></div><div id="home-reminders" class="compact-list"></div></div>
     <div class="panel"><div class="panel-title"><h2 data-t="contentPlan">Контент-план</h2><button class="text-button" type="button" data-goto="planner" data-t="viewAll">Усі</button></div><div id="home-plans" class="compact-list"></div></div>
@@ -159,6 +161,20 @@
       <div class="youtube-latest" id="youtube-latest"></div>
       <div class="youtube-foot" id="youtube-live-foot"></div>
     </div>
+   </section>
+   <section class="panel studio-panel" id="studio-panel" hidden aria-label="Creator Studio YouTube">
+    <div class="studio-head">
+      <div><h2 id="studio-heading">Мій YouTube · Creator Studio</h2><p id="studio-caption">Відео, планер, цілі, події й порівняння</p></div>
+      <button class="secondary-button" type="button" id="studio-reload">↻ <span id="studio-reload-text">Оновити</span></button>
+    </div>
+    <div class="studio-tabs" id="studio-tabs" role="tablist" aria-label="Вкладки Creator Studio">
+      <button role="tab" type="button" class="active" aria-selected="true" data-studio-tab="videos">Відео</button>
+      <button role="tab" type="button" aria-selected="false" data-studio-tab="planner">Планер</button>
+      <button role="tab" type="button" aria-selected="false" data-studio-tab="goals">Цілі</button>
+      <button role="tab" type="button" aria-selected="false" data-studio-tab="alerts">Сповіщення <span id="studio-alert-count" hidden></span></button>
+      <button role="tab" type="button" aria-selected="false" data-studio-tab="compare">Порівняння</button>
+    </div>
+    <div class="studio-body" id="studio-body" role="tabpanel" aria-live="polite"></div>
    </section>
    <div class="panel analytics-panel"><div class="panel-title"><h2 data-t="statistics">Звіти</h2><div class="row-buttons"><button class="secondary-button" id="report-template" type="button" data-t="sampleCsv">Шаблон CSV</button><label class="secondary-button file-button" for="report-import"><svg><use href="#i-upload"/></svg><span data-t="importReport">Імпорт звіту</span><input id="report-import" type="file" accept=".csv,.json,text/csv,application/json" hidden></label></div></div>
     <div class="analytics-filters"><label><span data-t="platform">Платформа</span><select id="analytics-provider"><option value="youtube">YouTube</option><option value="tiktok">TikTok</option><option value="twitch">Twitch</option><option value="x">X</option></select></label><label><span data-t="metric">Показник</span><select id="analytics-metric"><option value="views" data-t="views">Перегляди</option><option value="followers" data-t="followers">Підписники</option><option value="likes" data-t="likes">Вподобання</option><option value="comments" data-t="comments">Коментарі</option><option value="shares" data-t="shares">Поширення</option></select></label></div>
