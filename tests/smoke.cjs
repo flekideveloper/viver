@@ -97,4 +97,4 @@ const vm=require('node:vm');
  assert.equal(errors.length,0,'No uncaught app errors: '+errors.join('; '));
  window.close();
  console.log('VIVER smoke tests: PASS — legacy data, calendar, workflow, checklists, recurrence, whiteboard, CSV analytics and persistence');
-})().catch(err=>{console.error(err);process.exitCode=1});
+})().catch(err=>{console.error(err);process.exit(1)});
