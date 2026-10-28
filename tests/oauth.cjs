@@ -5,13 +5,14 @@ const fs=require('node:fs');
 const vm=require('node:vm');
 const {webcrypto}=require('node:crypto');
 const source=fs.readFileSync(require('node:path').join(__dirname,'../auth-worker/src/index.js'),'utf8');
-const pending=new Map(),accounts=new Map(),youtubeCache=new Map(),snapshots=new Map(),analyticsCache=new Map();
+const pending=new Map(),accounts=new Map(),youtubeCache=new Map(),snapshots=new Map(),analyticsCache=new Map(),videoCache=new Map();
 const DB={
  prepare(sql){const entry={sql,values:[],bind(...args){this.values=args;return this},
   async first(){
    const [a,b]=this.values;
    if(sql.includes('COUNT(*)'))return {total:[...pending.values()].filter(v=>v.client_hash===a).length};
    if(sql.includes('FROM oauth_pending'))return pending.get(a)&&pending.get(a).provider===b?pending.get(a):null;
+   if(sql.includes('FROM youtube_video_cache'))return videoCache.get(a)||null;
    if(sql.includes('FROM youtube_analytics_cache'))return analyticsCache.get(a)||null;
    if(sql.includes('FROM youtube_cache'))return youtubeCache.get(a)||null;
    if(sql.includes('FROM oauth_accounts'))return accounts.get(a+'|'+b)||null;
@@ -25,9 +26,11 @@ const DB={
    if(sql.includes('INSERT INTO oauth_pending'))pending.set(v[0],{state:v[0],client_hash:v[1],provider:v[2],verifier:v[3],created_at:v[4]});
    if(sql.includes('DELETE FROM oauth_pending WHERE state'))pending.delete(v[0]);
    if(sql.includes('INSERT INTO oauth_accounts'))accounts.set(v[0]+'|'+v[1],{client_hash:v[0],provider:v[1],subject:v[2],label:v[3],avatar:v[4],token_enc:v[5],refresh_enc:v[6],expires_at:v[7],updated_at:v[8]});
+   if(sql.includes('INSERT INTO youtube_video_cache'))videoCache.set(v[0],{client_hash:v[0],channel_id:v[1],payload:v[2],updated_at:v[3]});
    if(sql.includes('INSERT INTO youtube_analytics_cache'))analyticsCache.set(v[0],{client_hash:v[0],channel_id:v[1],payload:v[2],updated_at:v[3]});
    if(sql.includes('INSERT INTO youtube_cache'))youtubeCache.set(v[0],{client_hash:v[0],channel_id:v[1],payload:v[2],updated_at:v[3]});
    if(sql.includes('INSERT INTO youtube_snapshots'))snapshots.set(v[0]+'|'+v[1]+'|'+v[2],{client_hash:v[0],channel_id:v[1],date:v[2],view_count:v[3],subscriber_count:v[4],video_count:v[5],recorded_at:v[6]});
+   if(sql.includes('DELETE FROM youtube_video_cache'))videoCache.delete(v[0]);
    if(sql.includes('DELETE FROM youtube_analytics_cache'))analyticsCache.delete(v[0]);
    if(sql.includes('DELETE FROM youtube_cache'))youtubeCache.delete(v[0]);
    if(sql.includes('DELETE FROM youtube_snapshots')){for(const [k,row] of snapshots){if(row.client_hash===v[0])snapshots.delete(k)}}
@@ -42,6 +45,9 @@ const mockFetch=async(url,opts)=>{
  seen.push({url:String(url),body:String(opts?.body||'')});
  if(String(url).includes('youtubeanalytics.googleapis.com/v2/reports')){
   const u=new URL(String(url)),dim=u.searchParams.get('dimensions'),toObj=(headers,rows)=>({columnHeaders:headers.map(name=>({name})),rows});
+  if(dim==='elapsedVideoTimeRatio')return Response.json(toObj([dim,'audienceWatchRatio'],[[0,0.92],[0.5,0.68],[1,0.45]]));
+  if(dim==='video')return Response.json(toObj(['video','views','likes','comments','subscribersGained','estimatedMinutesWatched','averageViewDuration'],[['AbCdEfGhIjK',250,21,5,3,300,65]]));
+  if(!dim)return Response.json(toObj(u.searchParams.get('metrics').split(','),[[440,30,7,6,600,64]]));
   if(dim==='day'){
    const date=new Date(u.searchParams.get('endDate')+'T12:00:00Z');
    const metrics=u.searchParams.get('metrics').split(',');
@@ -61,7 +67,7 @@ const mockFetch=async(url,opts)=>{
  if(String(url).includes('oauth2.googleapis.com/token'))return Response.json({access_token:'secret-access-token',refresh_token:'secret-refresh-token',expires_in:3600});
  if(String(url).includes('youtube/v3/channels'))return Response.json({items:[{id:'test-channel',snippet:{title:'Creator Test',description:'Test channel',thumbnails:{default:{url:'https://example.com/avatar.jpg'}}},statistics:{viewCount:'15200',subscriberCount:'789',videoCount:'12',hiddenSubscriberCount:false},contentDetails:{relatedPlaylists:{uploads:'UUTESTUPLOADS'}}}]});
  if(String(url).includes('youtube/v3/playlistItems'))return Response.json({items:[{contentDetails:{videoId:'AbCdEfGhIjK'}}]});
- if(String(url).includes('youtube/v3/videos'))return Response.json({items:[{id:'AbCdEfGhIjK',snippet:{title:'Latest clip',publishedAt:'2026-10-20T12:00:00Z'},status:{privacyStatus:'public'},statistics:{viewCount:'420',likeCount:'30'}}]});
+ if(String(url).includes('youtube/v3/videos'))return Response.json({items:[{id:'AbCdEfGhIjK',snippet:{channelId:'test-channel',title:'Latest clip',publishedAt:'2026-10-20T12:00:00Z',thumbnails:{default:{url:'https://example.com/thumb.jpg'}}},status:{privacyStatus:'public'},contentDetails:{duration:'PT3M40S'},statistics:{viewCount:'420',likeCount:'30',commentCount:'7'}}]});
  return Response.json({error:'mock provider not implemented'}, {status:404});
 };
 const sandbox={crypto:webcrypto,URL,URLSearchParams,TextEncoder,TextDecoder,Request,Response,fetch:mockFetch,btoa,atob,console,Uint8Array,Date,JSON,Error};
@@ -138,7 +144,28 @@ const req=(path,method='GET',origin='https://flekideveloper.github.io',token=key
  assert.equal((await (await worker.fetch(req('/youtube/analytics'),env)).json()).fromCache,true,'analytics report cached');
  assert.equal(seen.filter(x=>x.url.includes('youtubeanalytics.googleapis.com')).length,reportRequests,'cache avoids repeated YouTube API queries');
  assert.equal(analyticsCache.size,1,'analytics cache in separate table');
+ assert.equal((await worker.fetch(req('/youtube/videos','GET','https://evil.example'),env)).status,403,'video library enforces frontend origin');
+ assert.equal((await worker.fetch(req('/youtube/videos','GET','https://flekideveloper.github.io','bad'),env)).status,401,'video library requires capability');
+ const videoResponse=await worker.fetch(req('/youtube/videos'),env);
+ assert.equal(videoResponse.status,200,'video library authorized');
+ const videos=await videoResponse.json();
+ assert.equal(videos.videos.length,1,'only owned public videos are listed');
+ assert.equal(videos.videos[0].views,420,'actual video totals from Data API');
+ assert.equal(videos.videos[0].week.views,250,'actual per-video week from Analytics API');
+ assert.equal(videos.videos[0].week.subscribersGained,3);
+ assert(!JSON.stringify(videos).includes('secret-access-token'),'video catalog exposes no access tokens');
+ assert.equal((await (await worker.fetch(req('/youtube/videos'),env)).json()).fromCache,true,'video library cached in D1');
+ const retentionResponse=await worker.fetch(req('/youtube/videos/AbCdEfGhIjK/retention'),env);
+ assert.equal(retentionResponse.status,200,'owned-video retention endpoint works');
+ const retention=await retentionResponse.json();
+ assert.equal(retention.points.length,3);
+ assert.equal(retention.points[1].ratio,0.68);
+ assert.equal((await worker.fetch(req('/youtube/videos/XxYyZzAaBbC/retention'),env)).status,404,'unowned video not queryable');
+ const comparison=await (await worker.fetch(req('/youtube/videos/compare?a=AbCdEfGhIjK&b=XxYyZzAaBbC'),env)).json();
+ assert.equal(comparison.error,'video_not_in_channel','unowned video comparison forbidden');
+ assert.equal((await worker.fetch(req('/youtube/videos/compare?a=AbCdEfGhIjK&b=AbCdEfGhIjK'),env)).status,400,'same video not allowed');
  assert.equal((await worker.fetch(req('/connections/youtube','DELETE'),env)).status,200);
+ assert.equal(videoCache.size,0,'video library cache erased on disconnect');
  assert.equal(analyticsCache.size,0,'analytics cache purged on disconnect');
  assert.equal(youtubeCache.size,0,'disconnect erases channel cache');
  assert.equal(snapshots.size,0,'disconnect erases snapshots');
