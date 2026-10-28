@@ -64,7 +64,7 @@ function nav(next,updateHash=true){
  $$('.page').forEach(el=>{const active=el.id==='page-'+page;el.classList.toggle('active',active);el.setAttribute('aria-hidden',String(!active))});
  $$('[data-page]').forEach(el=>{el.classList.toggle('active',el.dataset.page===page);if(el.dataset.page===page)el.setAttribute('aria-current','page');else el.removeAttribute('aria-current')});
  $('#page-heading').textContent=t(page);
- if(updateHash)history.replaceState(null,'','#'+page);
+ if(updateHash&&location.hash!=='#'+page)history.pushState(null,'','#'+page);
  $('#sidebar').classList.remove('open');$('#scrim').classList.remove('show');
  if(page==='board'&&!boardCentered){boardCentered=true;requestAnimationFrame(centerBoard)}
  if(page==='board')renderBoard();
@@ -72,7 +72,9 @@ function nav(next,updateHash=true){
 }
 $$('[data-page]').forEach(el=>el.addEventListener('click',()=>nav(el.dataset.page)));
 $$('[data-goto]').forEach(el=>el.addEventListener('click',()=>nav(el.dataset.goto)));
-window.addEventListener('hashchange',()=>{const key=location.hash.slice(1);if(key!==page)nav(key,false)});
+const syncLocation=()=>{const key=location.hash.slice(1);if(key!==page)nav(key,false)};
+window.addEventListener('hashchange',syncLocation);
+window.addEventListener('popstate',syncLocation);
 $('#menu').addEventListener('click',()=>{$('#sidebar').classList.toggle('open');$('#scrim').classList.toggle('show')});
 $('#scrim').addEventListener('click',()=>{$('#sidebar').classList.remove('open');$('#scrim').classList.remove('show')});
 function renderHome(){
