@@ -55,12 +55,6 @@ function lang(){
  $('#today').textContent=new Date().toLocaleDateString(state.language==='uk'?'uk-UA':'en-US',{day:'numeric',month:'long',year:'numeric'});
  renderHome();renderPlans();renderReminders();renderBoard();window.VIVERExtras?.translate?.();
 }
-function theme(){
- document.documentElement.dataset.theme=state.theme;
- const themeColors={dark:'#111215',light:'#f8f8f7',gray:'#292a2f',cosmic:'#0a0f23'};
- $('meta[name="theme-color"]').content=themeColors[state.theme]||themeColors.dark;
- $('[data-theme-option]').forEach(el=>{const active=el.dataset.themeOption===state.theme;el.classList.toggle('active',active);el.setAttribute('aria-pressed',String(active))});
-}
 function nav(next,updateHash=true){
  if(!['home','planner','calendar','reminders','board','platforms','settings'].includes(next))next='home';
  page=next;
@@ -242,7 +236,12 @@ stage.addEventListener('dblclick',ev=>{
  const rect=stage.getBoundingClientRect();
  addNote({x:(ev.clientX-rect.left)/zoom-100,y:(ev.clientY-rect.top)/zoom-40});
 });
-function renderTheme(){document.documentElement.dataset.theme=state.theme;$$('[data-theme-option]').forEach(b=>b.classList.toggle('active',b.dataset.themeOption===state.theme))}
+function renderTheme(){
+ document.documentElement.dataset.theme=state.theme;
+ const themeColors={dark:'#111215',light:'#f8f8f7',gray:'#292a2f',cosmic:'#0a0f23'};
+ $('meta[name="theme-color"]').content=themeColors[state.theme]||themeColors.dark;
+ $('[data-theme-option]').forEach(b=>{const active=b.dataset.themeOption===state.theme;b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active))});
+}
 $$('[data-theme-option]').forEach(b=>b.addEventListener('click',()=>{state.theme=b.dataset.themeOption;save();renderTheme()}));
 $('#language').addEventListener('change',ev=>{state.language=ev.target.value==='en'?'en':'uk';save();lang();if(editingPlan){$('#plan-form-heading').textContent=t('editPost');$('#plan-save').textContent=t('saveChanges')}if(editingReminder){$('#reminder-form-heading').textContent=t('editReminder');$('#reminder-save').textContent=t('saveChanges')}});
 $('#export').addEventListener('click',()=>{
