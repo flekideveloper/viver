@@ -7,9 +7,9 @@ const S=()=>c.state,E=s=>c.esc(s),save=()=>c.save(),toast=s=>c.toast(s),L=()=>S(
 const msg=(uk,en)=>L()==='uk'?uk:en;
 const stages=['idea','script','record','edit','ready','published'];
 const stageName=s=>({idea:msg('Ідея','Idea'),draft:msg('У процесі','In progress'),script:msg('Сценарій','Script'),record:msg('Запис','Recording'),edit:msg('Монтаж','Editing'),ready:msg('Готово','Ready'),published:msg('Опубліковано','Published')})[s]||s;
+const keyOf=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 let planMode='list',calendarMonth=new Date(),selectedDay=keyOf(new Date()),expandedChecks=new Set(),connecting='',selectedGroup='all',pendingImage='';
 calendarMonth.setDate(1);calendarMonth.setHours(12,0,0,0);
-const keyOf=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 const asInput=d=>new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16);
 function setMode(mode){
  if(!['list','board'].includes(mode))mode='list';planMode=mode;
@@ -86,7 +86,7 @@ function renderAgenda(){
   ...plans.map(p=>({id:p.id,kind:'plan',date:p.date,title:p.title,tag:stageName(p.status)})),
   ...reminders.map(r=>({id:r.id,kind:'reminder',date:r.due,title:r.title,tag:msg('Нагадування','Reminder')}))
  ].sort((a,b)=>a.date.localeCompare(b.date));
- $('#calendar-day-items').innerHTML=rows.length?rows.map(x=>'<button type="button" class="agenda-row" data-agenda-'+x.kind+'="'+E(x.id)+'"><span class="agenda-time">'+E(x.date.slice(11,16))+'</span><span class="agenda-body"><strong>'+E(x.title)+'</strong><small>'+E(x.tag)+'</small></span><span class="agenda-chevron">›</span></button>').join(''):'<p class="agenda-empty">'+msg('На цей день нічого немає.','На цей день нічого немає.').replace('На цей день нічого немає.',L()==='uk'?'На цей день нічого немає.':'Nothing planned for this day.')+'</p>';
+ $('#calendar-day-items').innerHTML=rows.length?rows.map(x=>'<button type="button" class="agenda-row" data-agenda-'+x.kind+'="'+E(x.id)+'"><span class="agenda-time">'+E(x.date.slice(11,16))+'</span><span class="agenda-body"><strong>'+E(x.title)+'</strong><small>'+E(x.tag)+'</small></span><span class="agenda-chevron">›</span></button>').join(''):'<p class="agenda-empty">'+msg('На цей день нічого немає.','Nothing planned for this day.')+'</p>';
 }
 $('#calendar-day-items').addEventListener('click',ev=>{
  const planBtn=ev.target.closest('[data-agenda-plan]');if(planBtn){openPlan(planBtn.dataset.agendaPlan);return}
