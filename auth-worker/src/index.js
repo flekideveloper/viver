@@ -365,8 +365,9 @@ function publicVideo(v){
   views:asCount(stats.viewCount),likes:asCount(stats.likeCount),comments:asCount(stats.commentCount),
   duration:v.contentDetails?.duration||'',url:'https://www.youtube.com/watch?v='+encodeURIComponent(v.id)};
 }
-async function videoCatalog(env,owner){
- const cached=await env.DB.prepare('SELECT channel_id,payload,updated_at FROM youtube_video_cache WHERE client_hash=?').bind(owner.clientHash).first();
+async function videoCatalog(env,owner,cursor=''){
+ if(cursor&&!/^[A-Za-z0-9_-]{2,512}$/.test(cursor))throw Error('invalid_page_cursor');
+ const cached=cursor?null:await env.DB.prepare('SELECT channel_id,payload,updated_at FROM youtube_video_cache WHERE client_hash=?').bind(owner.clientHash).first();
  if(cached&&cached.channel_id===owner.row.subject&&Date.now()-cached.updated_at<VIDEO_CACHE_MS){
   try{return {...JSON.parse(cached.payload),updatedAt:cached.updated_at,fromCache:true}}catch{}
  }
@@ -374,7 +375,7 @@ async function videoCatalog(env,owner){
  const channel=(channels.items||[]).find(x=>x.id===owner.row.subject);
  const playlistId=channel?.contentDetails?.relatedPlaylists?.uploads;
  if(!playlistId||!/^[A-Za-z0-9_-]+$/.test(playlistId))return {channelId:owner.row.subject,videos:[],updatedAt:Date.now()};
- const listing=await youtubeApi('playlistItems?part=contentDetails&maxResults=50&playlistId='+encodeURIComponent(playlistId),owner.accessToken);
+ const listing=await youtubeApi('playlistItems?part=contentDetails&maxResults=50&playlistId='+encodeURIComponent(playlistId)+(cursor?'&pageToken='+encodeURIComponent(cursor):''),owner.accessToken);
  const ids=(listing.items||[]).map(x=>x.contentDetails?.videoId).filter(validVideo).slice(0,50);
  let videos=[];
  if(ids.length){
@@ -397,22 +398,23 @@ async function videoCatalog(env,owner){
    });
   }
  }catch(e){console.warn('VIVER video weekly analytics unavailable',e.message)}
- const timestamp=Date.now(),payload={channelId:owner.row.subject,videos,reportPeriod:{start,end}};
- await env.DB.prepare('INSERT INTO youtube_video_cache(client_hash,channel_id,payload,updated_at) VALUES(?,?,?,?) ON CONFLICT(client_hash) DO UPDATE SET channel_id=excluded.channel_id,payload=excluded.payload,updated_at=excluded.updated_at')
+ const timestamp=Date.now(),payload={channelId:owner.row.subject,videos,reportPeriod:{start,end},nextPageToken:listing.nextPageToken||null};
+ if(!cursor)await env.DB.prepare('INSERT INTO youtube_video_cache(client_hash,channel_id,payload,updated_at) VALUES(?,?,?,?) ON CONFLICT(client_hash) DO UPDATE SET channel_id=excluded.channel_id,payload=excluded.payload,updated_at=excluded.updated_at')
   .bind(owner.clientHash,owner.row.subject,JSON.stringify(payload),timestamp).run();
  return {...payload,updatedAt:timestamp,fromCache:false};
 }
 async function youtubeVideoLibrary(req,env){
  const o=await ownedYoutube(req,env);if(o.error)return o.error;
- try{return json(await videoCatalog(env,o))}
- catch(e){console.warn('VIVER video catalog unavailable',e.message);return json({error:'youtube_videos_unavailable'},503)}
+ try{return json(await videoCatalog(env,o,new URL(req.url).searchParams.get('cursor')||''))}
+ catch(e){console.warn('VIVER video catalog unavailable',e.message);return json({error:e.message==='invalid_page_cursor'?'invalid_page_cursor':'youtube_videos_unavailable'},e.message==='invalid_page_cursor'?400:503)}
 }
 async function youtubeVideoRetention(req,env,id){
  const o=await ownedYoutube(req,env);if(o.error)return o.error;
  if(!validVideo(id))return json({error:'invalid_video_id'},400);
  try{
-  const catalog=await videoCatalog(env,o);
-  if(!catalog.videos.some(v=>v.id===id))return json({error:'video_not_in_channel'},404);
+  const ownership=await youtubeApi('videos?part=snippet,status&id='+encodeURIComponent(id),o.accessToken);
+  const video=(ownership.items||[]).find(x=>x.id===id);
+  if(!video||video.snippet?.channelId!==o.row.subject||video.status?.privacyStatus!=='public')return json({error:'video_not_in_channel'},404);
   const end=dateUTC(-1);
   const result=await analyticsQuery(o.accessToken,{startDate:'2015-01-01',endDate:end,filters:'video=='+id,
    dimensions:'elapsedVideoTimeRatio',metrics:'audienceWatchRatio',sort:'elapsedVideoTimeRatio'});
@@ -426,8 +428,8 @@ async function youtubeVideoCompare(req,env){
  const url=new URL(req.url),a=url.searchParams.get('a'),b=url.searchParams.get('b');
  if(!validVideo(a)||!validVideo(b)||a===b)return json({error:'invalid_video_ids'},400);
  try{
-  const catalog=await videoCatalog(env,o);
-  const selected=[a,b].map(id=>catalog.videos.find(v=>v.id===id));
+  const ownership=await youtubeApi('videos?part=snippet,statistics,status&id='+encodeURIComponent(a+','+b),o.accessToken);
+  const selected=[a,b].map(id=>(ownership.items||[]).find(v=>v.id===id&&v.snippet?.channelId===o.row.subject&&v.status?.privacyStatus==='public')).map(v=>v&&publicVideo(v));
   if(selected.some(x=>!x))return json({error:'video_not_in_channel'},404);
   const metrics='views,likes,comments,subscribersGained,estimatedMinutesWatched,averageViewDuration';
   const reports=await Promise.allSettled(selected.map(async v=>{
@@ -437,14 +439,15 @@ async function youtubeVideoCompare(req,env){
    if(end<start)return {...v,report:null,partial:true};
    const days=Math.round((Date.parse(end)-Date.parse(start))/86400000)+1;
    const rows=await analyticsQuery(o.accessToken,{startDate:start,endDate:end,filters:'video=='+v.id,metrics});
-   const r=rows[0]||{};
+   const r=rows[0]||null;
    return {id:v.id,title:v.title,publishedAt:v.publishedAt,period:{start,end,days,complete:days===7},
-    report:{views:asCount(r.views)||0,likes:asCount(r.likes)||0,comments:asCount(r.comments)||0,
-     subscribersGained:asCount(r.subscribersGained)||0,watchMinutes:asCount(r.estimatedMinutesWatched)||0,
-     avgViewSeconds:asCount(r.averageViewDuration)||0}};
+    ...(r?{}:{report:null}),
+    report:r?{views:asCount(r.views),likes:asCount(r.likes),comments:asCount(r.comments),
+     subscribersGained:asCount(r.subscribersGained),watchMinutes:asCount(r.estimatedMinutesWatched),
+     avgViewSeconds:asCount(r.averageViewDuration)}:null};
   }));
   return json({videos:reports.map((r,i)=>r.status==='fulfilled'?r.value:{id:selected[i].id,title:selected[i].title,error:'analytics_unavailable'}),
-   comparable:reports.every(r=>r.status==='fulfilled'&&r.value?.period?.complete)});
+   comparable:reports.every(r=>r.status==='fulfilled'&&r.value?.period?.complete&&r.value?.report)});
  }catch(e){return json({error:'youtube_compare_unavailable'},503)}
 }
 
