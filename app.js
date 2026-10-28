@@ -89,7 +89,9 @@ function renderHome(){
 for(const [root,key,selector,target] of [['#home-plans','homePlan','[data-plan-edit]','planner'],['#home-reminders','homeReminder','[data-reminder-edit]','reminders']]){
  $(root).addEventListener('click',ev=>{
   const btn=ev.target.closest('[data-'+(key==='homePlan'?'home-plan':'home-reminder')+']');if(!btn)return;
-  const id=btn.dataset[key];nav(target);
+  const id=btn.dataset[key];
+  if(target==='planner'){$('#plan-filter').value='all';renderPlans()}
+  nav(target);
   const action=$$(selector).find(x=>x.dataset[key==='homePlan'?'planEdit':'reminderEdit']===id);action?.click();
  });
 }
@@ -308,7 +310,10 @@ $('#search-close').addEventListener('click',()=>searchDialog.close());
 searchInput.addEventListener('input',renderSearch);
 $('#search-results').addEventListener('click',ev=>{
  const item=ev.target.closest('[data-search-target]');if(!item)return;
- searchDialog.close();nav(item.dataset.searchTarget);
+ searchDialog.close();
+ if(item.dataset.searchTarget==='planner'){$('#plan-filter').value='all';renderPlans()}
+ if(item.dataset.searchTarget==='reminders'){reminderFilter='all';renderReminders()}
+ nav(item.dataset.searchTarget);
  if(item.dataset.searchId){
   const sel=item.dataset.searchTarget==='planner'?'[data-plan-edit]':'[data-reminder-edit]';
   const name=item.dataset.searchTarget==='planner'?'planEdit':'reminderEdit';
