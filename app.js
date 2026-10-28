@@ -100,7 +100,7 @@ function clearPlan(){
  editingPlan='';$('#plan-form').reset();defaults();$('#plan-form-heading').textContent=t('newPost');$('#plan-save').textContent=t('addPost');$('#plan-cancel').hidden=true;
 }
 function clearReminder(){
- editingReminder='';$('#reminder-form').reset();defaults();$('#reminder-form-heading').textContent=t('newReminder');$('#reminder-save').textContent=t('addReminder');$('#reminder-cancel').hidden=true;$('#reminder-repeat').value='none';$('#reminder-weekdays').hidden=true;$('#reminder-weekdays input').forEach(x=>x.checked=false);
+ editingReminder='';$('#reminder-form').reset();defaults();$('#reminder-form-heading').textContent=t('newReminder');$('#reminder-save').textContent=t('addReminder');$('#reminder-cancel').hidden=true;$('#reminder-repeat').value='none';$('#reminder-weekdays').hidden=true;$$('#reminder-weekdays input').forEach(x=>x.checked=false);
 }
 $('#plan-cancel').addEventListener('click',clearPlan);
 $('#reminder-cancel').addEventListener('click',clearReminder);
@@ -137,7 +137,7 @@ $('#plan-list').addEventListener('click',ev=>{
 $('#reminder-form').addEventListener('submit',ev=>{
  ev.preventDefault();const title=$('#reminder-title').value.trim(),due=$('#reminder-due').value;if(!title||!validDate(due))return;
  const existing=state.reminders.find(r=>r.id===editingReminder);
- const record={title:title.slice(0,110),due,priority:$('#reminder-priority').value,repeat:$('#reminder-repeat').value,weekdays:$('#reminder-weekdays input:checked').map(x=>Number(x.value)),anchorDay:new Date(due).getDate()};
+ const record={title:title.slice(0,110),due,priority:$('#reminder-priority').value,repeat:$('#reminder-repeat').value,weekdays:$$('#reminder-weekdays input:checked').map(x=>Number(x.value)),anchorDay:new Date(due).getDate()};
  if(existing){Object.assign(existing,record);existing.notified=false}else state.reminders.push({...record,id:uid(),done:false,notified:false,created:Date.now()});
  save();clearReminder();renderReminders();renderHome();toast(t(existing?'updated':'created'));
 });
