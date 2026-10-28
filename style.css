@@ -173,3 +173,45 @@ dialog{background:var(--card);border:1px solid var(--border);color:var(--text);b
 @media(max-width:850px){.theme-setting-row{flex-direction:column;align-items:stretch;gap:12px}.theme-setting-row>div:first-child{padding:0}.theme-grid{max-width:none}}
 @media(max-width:620px){.theme-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.calendar-page-panel{padding:10px}.calendar-page-panel .calendar-cell{min-height:85px}.calendar-page-panel .calendar-nav{padding:7px 5px 0}.calendar-month-steps strong{min-width:115px;font-size:12px}.calendar-month-steps{gap:2px}.calendar-page-panel .calendar-event{font-size:9px}.calendar-page-panel .calendar-date{font-size:10px}.calendar-agenda{padding:18px}.page-title .calendar-top-actions .secondary-button{padding:8px 10px}}
 @media(max-width:400px){.calendar-page-panel .calendar-cell{min-height:72px;padding:3px}.calendar-page-panel .calendar-event{font-size:8px;padding:2px 3px}.calendar-page-panel .calendar-month-steps strong{min-width:95px;font-size:11px}.calendar-page-panel .calendar-nav .secondary-button{padding:6px}}
+
+
+/* VIVER 0.4 — focus content first; show editors only when requested. */
+.workspace-grid:not(.editing){grid-template-columns:minmax(0,1fr)}
+.workspace-grid:not(.editing)>.form-panel{display:none}
+.workspace-grid:not(.editing)>.list-panel{width:100%;min-width:0}
+.workspace-grid.editing>.form-panel{display:block}
+.workspace-grid .list-panel{min-height:230px}
+#planner-layout .list-item,#reminder-layout .list-item{gap:14px}
+#planner-layout:not(.editing) .list-item{padding:16px 0}
+#reminder-layout:not(.editing) .list-item{padding:15px 0}
+.planner-header{justify-content:flex-end}
+.planner-header .count{margin-right:auto}
+#plan-new-top{min-width:125px}
+.compact-action{width:100%;font:inherit;color:var(--text);background:transparent;border:0;cursor:pointer;text-align:left;border-radius:7px;padding:12px 8px}
+.compact-action:hover{background:var(--hover)}
+.compact-action:focus-visible{outline:2px solid var(--accent)}
+.compact-action>span{min-width:0}
+.overview-stats .stat{min-height:124px}
+.overview-stats .stat strong{font-size:30px;margin:7px 0 2px}
+.overview-grid .panel{min-height:215px}
+#page-platforms .analytics-panel{max-width:950px;margin-top:0}
+#page-platforms .page-title{margin-bottom:22px}
+#page-platforms .analytics-panel .panel-title h2{font-size:14px}
+.note-details-dialog{width:min(430px,calc(100vw - 25px));padding:22px}
+.note-details-dialog form{display:flex;flex-direction:column;gap:18px}
+.note-dialog-heading{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.note-dialog-heading h2{font-size:16px;margin:0}
+.note-details-dialog label{display:flex;flex-direction:column;gap:8px;font-size:12px;color:var(--sub)}
+.note-details-dialog input{background:var(--field);border:1px solid var(--border);border-radius:8px;min-height:42px;padding:10px 12px;color:var(--text);font-size:12px}
+.note-details-dialog .form-actions{margin-top:0}
+.note-details-dialog .form-actions .primary-button{min-height:38px}
+.sticky .note-menu{z-index:10}
+.sticky:has(.note-menu:not([hidden])){z-index:100000!important}
+.board-surface .sticky-group{max-width:100px}
+.calendar-agenda .agenda-row{transition:background .1s}
+#calendar-content .calendar-cell:focus-within{outline:1px solid var(--accent);outline-offset:-1px}
+#page-settings .setting-row{min-height:74px}
+#page-settings .theme-option:focus-visible{outline-offset:3px}
+#page-reminders .page-title{flex-wrap:wrap}
+@media(min-width:861px){.topbar-left>strong{display:none}}
+@media(max-width:640px){.page-title .row-buttons{flex-wrap:wrap}.page-title #reminder-new-top{order:1}.page-title #enable-alerts{order:2}.planner-header{width:100%}.planner-header #plan-new-top{flex:0 0 auto}.workspace-grid .list-panel{padding:16px}.theme-grid{gap:8px}.overview-stats .stat{min-height:113px}.overview-stats .stat strong{font-size:27px}.note-details-dialog{padding:18px}}
