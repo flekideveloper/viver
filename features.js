@@ -220,7 +220,7 @@ layer.addEventListener('click',ev=>{
  const trigger=ev.target.closest('[data-note-menu]');
  if(trigger){
   ev.stopImmediatePropagation();
-  const menu=layer.querySelector('[data-menu-for="'+CSS.escape(trigger.dataset.noteMenu)+'"]');
+  const menu=[...layer.querySelectorAll('[data-menu-for]')].find(el=>el.dataset.menuFor===trigger.dataset.noteMenu);
   const wasOpen=!menu.hidden;
   $$('.note-menu').forEach(m=>m.hidden=true);
   menu.hidden=wasOpen;return;
