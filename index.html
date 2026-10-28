@@ -66,7 +66,7 @@
   <section class="page" id="page-planner">
    <div class="page-title"><h1 data-t="planner">Планер</h1><div class="planner-header"><span id="plan-count" class="count"></span><div class="segmented" id="plan-modes"><button type="button" data-plan-mode="list" class="active" data-t="listMode">Список</button><button type="button" data-plan-mode="board" data-t="kanbanMode">Етапи</button></div><button type="button" class="primary-button" id="plan-new-top"><svg><use href="#i-plus"/></svg><span data-t="newPost">Новий запис</span></button></div></div>
    <div class="workspace-grid" id="planner-layout">
-    <div class="panel form-panel" id="plan-editor"><h2 id="plan-form-heading" data-t="newPost">Новий запис</h2>
+    <div class="panel form-panel" id="plan-editor" hidden><h2 id="plan-form-heading" data-t="newPost">Новий запис</h2>
      <form id="plan-form">
       <label><span data-t="title">Назва</span><input id="plan-title" maxlength="110" required placeholder="Назва відео або стриму" data-ph="contentPlaceholder"></label>
       <div class="two-fields"><label><span data-t="platform">Платформа</span><select id="plan-platform"><option value="youtube">YouTube</option><option value="tiktok">TikTok</option><option value="twitch">Twitch</option><option value="x">X</option><option value="other" data-t="other">Інше</option></select></label>
@@ -96,7 +96,7 @@
   <section class="page" id="page-reminders">
    <div class="page-title"><h1 data-t="reminders">Нагадування</h1><div class="row-buttons"><button type="button" class="secondary-button" id="enable-alerts" title="Сповіщення працюють, поки вкладка відкрита"><svg><use href="#i-bell"/></svg><span data-t="alerts">Сповіщення</span></button><button type="button" class="primary-button" id="reminder-new-top"><svg><use href="#i-plus"/></svg><span data-t="newReminder">Нове нагадування</span></button></div></div>
    <div class="workspace-grid" id="reminder-layout">
-    <div class="panel form-panel" id="reminder-editor"><h2 id="reminder-form-heading" data-t="newReminder">Нове нагадування</h2>
+    <div class="panel form-panel" id="reminder-editor" hidden><h2 id="reminder-form-heading" data-t="newReminder">Нове нагадування</h2>
      <form id="reminder-form">
       <label><span data-t="title">Назва</span><input id="reminder-title" maxlength="110" required placeholder="Що потрібно зробити?" data-ph="taskPlaceholder"></label>
       <label><span data-t="date">Дата й час</span><input id="reminder-due" type="datetime-local" required></label>
