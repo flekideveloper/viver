@@ -13,7 +13,7 @@ calendarMonth.setDate(1);calendarMonth.setHours(12,0,0,0);
 const asInput=d=>new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16);
 function setMode(mode){
  if(!['list','board'].includes(mode))mode='list';planMode=mode;
- $('#plan-modes button').forEach(b=>b.classList.toggle('active',b.dataset.planMode===mode));
+ $$('#plan-modes button').forEach(b=>b.classList.toggle('active',b.dataset.planMode===mode));
  const list=mode==='list';$('#page-planner .workspace-grid').hidden=!list;
  $('#planner-visual').hidden=list;
  if(!list)renderVisual();
