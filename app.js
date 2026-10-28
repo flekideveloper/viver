@@ -143,17 +143,33 @@
   if(!$('#plan-date').value)$('#plan-date').value=defaultWhen(1);
   if(!$('#reminder-due').value)$('#reminder-due').value=defaultWhen(0);
  }
+ let editingPlan=null,editingReminder=null;
+ $('#plan-form .form-submit').insertAdjacentHTML('afterend','<button type="button" class="button button-quiet" id="cancel-plan-edit" hidden>Cancel editing</button>');
+ $('#reminder-form .form-submit').insertAdjacentHTML('afterend','<button type="button" class="button button-quiet" id="cancel-reminder-edit" hidden>Cancel editing</button>');
+ function resetPlanEdit(){
+  editingPlan=null;$('#plan-form').reset();formInputDefaults();
+  $('#cancel-plan-edit').hidden=true;$('#plan-form .form-submit').lastChild.textContent=' Add content';
+ }
+ function resetReminderEdit(){
+  editingReminder=null;$('#reminder-form').reset();formInputDefaults();
+  $('#cancel-reminder-edit').hidden=true;$('#reminder-form .form-submit').lastChild.textContent=' Add reminder';
+ }
+ $('#cancel-plan-edit').addEventListener('click',resetPlanEdit);
+ $('#cancel-reminder-edit').addEventListener('click',resetReminderEdit);
  $('#plan-form').addEventListener('submit',ev=>{
   ev.preventDefault();
   const title=$('#plan-title').value.trim(),date=$('#plan-date').value,status=$('#plan-status').value;
   if(title.length<2||!validDate(date)){toast('Please enter a valid title and date.');return}
-  state.plans.push({id:uid(),title:title.slice(0,110),platform:$('#plan-platform').value,date,status,notes:$('#plan-notes').value.trim().slice(0,350),created:Date.now()});
-  if(!save())return;$('#plan-form').reset();formInputDefaults();renderPlanner();renderDashboard();toast('Content plan saved.');
+  const item={title:title.slice(0,110),platform:$('#plan-platform').value,date,status,notes:$('#plan-notes').value.trim().slice(0,350)};
+  const original=state.plans.find(x=>x.id===editingPlan);
+  if(original)Object.assign(original,item);
+  else state.plans.push({...item,id:uid(),created:Date.now()});
+  if(!save())return;resetPlanEdit();renderPlanner();renderDashboard();toast(original?'Content plan updated.':'Content plan saved.');
  });
  function renderPlanner(){
   const filter=$('#plan-filter').value;
   const items=state.plans.filter(x=>filter==='all'||filter===x.status).sort((a,b)=>new Date(a.date)-new Date(b.date));
-  $('#plan-list').innerHTML=items.length?items.map(p=>'<div class="pipeline-item" data-plan-id="'+short(p.id)+'"><span class="dash-item-icon">'+icon('calendar')+'</span><div class="pipeline-item-body"><strong>'+short(p.title)+'</strong><small>'+short(platformName(p.platform))+' · '+short(dateText(p.date))+'</small>'+(p.notes?'<small>'+short(p.notes)+'</small>':'')+'</div><select class="stage-select" data-plan-stage="'+short(p.id)+'" aria-label="Change stage">'+['idea','draft','ready','published'].map(k=>'<option value="'+k+'"'+(k===p.status?' selected':'')+'>'+short(stageName(k))+'</option>').join('')+'</select><div class="item-actions"><button class="del" data-plan-delete="'+short(p.id)+'" aria-label="Delete plan">'+icon('trash')+'</button></div></div>').join(''):empty('calendar',t('No plans yet'),'Your content schedule will appear here.');
+  $('#plan-list').innerHTML=items.length?items.map(p=>'<div class="pipeline-item" data-plan-id="'+short(p.id)+'"><span class="dash-item-icon">'+icon('calendar')+'</span><div class="pipeline-item-body"><strong>'+short(p.title)+'</strong><small>'+short(platformName(p.platform))+' · '+short(dateText(p.date))+'</small>'+(p.notes?'<small>'+short(p.notes)+'</small>':'')+'</div><select class="stage-select" data-plan-stage="'+short(p.id)+'" aria-label="Change stage">'+['idea','draft','ready','published'].map(k=>'<option value="'+k+'"'+(k===p.status?' selected':'')+'>'+short(stageName(k))+'</option>').join('')+'</select><div class="item-actions"><button data-plan-edit="'+short(p.id)+'" aria-label="Edit plan">'+icon('edit')+'</button><button class="del" data-plan-delete="'+short(p.id)+'" aria-label="Delete plan">'+icon('trash')+'</button></div></div>').join(''):empty('calendar',t('No plans yet'),'Your content schedule will appear here.');
   $('#planner-total').textContent=state.plans.length+' '+(state.plans.length===1?'entry':'entries');
  }
  $('#plan-list').addEventListener('change',ev=>{
@@ -162,6 +178,16 @@
   item.status=el.value;save();renderDashboard();renderPlanner();toast('Stage updated.');
  });
  $('#plan-list').addEventListener('click',ev=>{
+  const edit=ev.target.closest('[data-plan-edit]');
+  if(edit){
+   const p=state.plans.find(x=>x.id===edit.dataset.planEdit);if(!p)return;
+   editingPlan=p.id;
+   $('#plan-title').value=p.title;$('#plan-platform').value=p.platform;$('#plan-date').value=p.date;
+   $('#plan-status').value=p.status;$('#plan-notes').value=p.notes;
+   $('#cancel-plan-edit').hidden=false;$('#plan-form .form-submit').lastChild.textContent=' Save changes';
+   $('#plan-title').focus();$('#plan-form').scrollIntoView({behavior:'smooth',block:'center'});
+   return;
+  }
   const btn=ev.target.closest('[data-plan-delete]');if(!btn)return;
   if(!confirm('Delete this content plan?'))return;
   state.plans=state.plans.filter(x=>x.id!==btn.dataset.planDelete);save();renderPlanner();renderDashboard();
@@ -171,18 +197,28 @@
   ev.preventDefault();
   const title=$('#reminder-title').value.trim(),due=$('#reminder-due').value;
   if(title.length<2||!validDate(due)){toast('Please enter a title and a valid time.');return}
-  state.reminders.push({id:uid(),title:title.slice(0,110),due,priority:$('#reminder-priority').value,done:false,notified:false,created:Date.now()});
-  save();$('#reminder-form').reset();formInputDefaults();renderReminders();renderDashboard();toast('Reminder created.');
+  const item=state.reminders.find(x=>x.id===editingReminder);
+  if(item){item.title=title.slice(0,110);item.due=due;item.priority=$('#reminder-priority').value;item.notified=false}
+  else state.reminders.push({id:uid(),title:title.slice(0,110),due,priority:$('#reminder-priority').value,done:false,notified:false,created:Date.now()});
+  save();resetReminderEdit();renderReminders();renderDashboard();toast(item?'Reminder updated.':'Reminder created.');
  });
  function renderReminders(){
   $$('.filter-tab').forEach(el=>el.classList.toggle('active',el.dataset.reminderFilter===activeReminders));
   const items=state.reminders.filter(x=>activeReminders==='all'||(activeReminders==='done'?x.done:!x.done)).sort((a,b)=>Number(a.done)-Number(b.done)||new Date(a.due)-new Date(b.due));
   $('#reminder-list').innerHTML=items.length?items.map(r=>{
    const overdue=!r.done&&new Date(r.due)<new Date();
-   return '<div class="reminder-row '+(r.done?'is-done ':'')+(overdue?'overdue':'')+'"><button class="check-toggle '+(r.done?'done':'')+'" data-reminder-toggle="'+short(r.id)+'" aria-label="'+(r.done?'Mark incomplete':'Mark complete')+'">'+icon('check')+'</button><div class="reminder-body"><strong>'+short(r.title)+'</strong><small><span class="priority-dot '+short(r.priority)+'"></span>'+short(dateText(r.due))+' · '+short(r.priority)+' priority'+(overdue?' · Overdue':'')+'</small></div><div class="item-actions"><button class="del" data-reminder-delete="'+short(r.id)+'" aria-label="Delete reminder">'+icon('trash')+'</button></div></div>';
+   return '<div class="reminder-row '+(r.done?'is-done ':'')+(overdue?'overdue':'')+'"><button class="check-toggle '+(r.done?'done':'')+'" data-reminder-toggle="'+short(r.id)+'" aria-label="'+(r.done?'Mark incomplete':'Mark complete')+'">'+icon('check')+'</button><div class="reminder-body"><strong>'+short(r.title)+'</strong><small><span class="priority-dot '+short(r.priority)+'"></span>'+short(dateText(r.due))+' · '+short(r.priority)+' priority'+(overdue?' · Overdue':'')+'</small></div><div class="item-actions"><button data-reminder-edit="'+short(r.id)+'" aria-label="Edit reminder">'+icon('edit')+'</button><button class="del" data-reminder-delete="'+short(r.id)+'" aria-label="Delete reminder">'+icon('trash')+'</button></div></div>';
   }).join(''):empty('check',t('No reminders yet'),'Nothing on your list. A little breathing room!');
  }
  $('#reminder-list').addEventListener('click',ev=>{
+  const edit=ev.target.closest('[data-reminder-edit]');
+  if(edit){
+   const r=state.reminders.find(x=>x.id===edit.dataset.reminderEdit);if(!r)return;
+   editingReminder=r.id;$('#reminder-title').value=r.title;$('#reminder-due').value=r.due;$('#reminder-priority').value=r.priority;
+   $('#cancel-reminder-edit').hidden=false;$('#reminder-form .form-submit').lastChild.textContent=' Save changes';
+   $('#reminder-title').focus();$('#reminder-form').scrollIntoView({behavior:'smooth',block:'center'});
+   return;
+  }
   const toggle=ev.target.closest('[data-reminder-toggle]');
   if(toggle){const item=state.reminders.find(x=>x.id===toggle.dataset.reminderToggle);if(item){item.done=!item.done;if(!item.done)item.notified=false;save();renderReminders();renderDashboard()}return}
   const remove=ev.target.closest('[data-reminder-delete]');
