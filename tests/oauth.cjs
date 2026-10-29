@@ -122,7 +122,7 @@ const mockFetch=async(url,opts)=>{
   const ids=(new URL(url).searchParams.get('id')||'').split(',');
   const known=[
    {id:'AbCdEfGhIjK',snippet:{channelId:"UCAAAAAAAAAAAAAAAAAAAAAA",title:'Latest clip',publishedAt:'2026-10-20T12:00:00Z',thumbnails:{default:{url:'https://example.com/thumb.jpg'}}},status:{privacyStatus:'public'},contentDetails:{duration:'PT3M40S'},statistics:{viewCount:'420',likeCount:'30',commentCount:'7'}},
-   {id:'LmNoPqRsTuV',snippet:{channelId:'test-channel',title:'Older clip',publishedAt:'2026-10-15T12:00:00Z'},status:{privacyStatus:'public'},contentDetails:{duration:'PT2M'},statistics:{viewCount:'300',likeCount:'15',commentCount:'4'}}
+   {id:'LmNoPqRsTuV',snippet:{channelId:"UCAAAAAAAAAAAAAAAAAAAAAA",title:'Older clip',publishedAt:'2026-10-15T12:00:00Z'},status:{privacyStatus:'public'},contentDetails:{duration:'PT2M'},statistics:{viewCount:'300',likeCount:'15',commentCount:'4'}}
   ];
   return Response.json({items:known.filter(x=>ids.includes(x.id))});
  }
