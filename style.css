@@ -591,3 +591,29 @@ dialog{background:var(--card);border:1px solid var(--border);color:var(--text);b
 /* Keep connected network buttons reachable on small screens. */
 .sidebar{overflow-y:auto;scrollbar-width:thin}
 .sidebar-social .social-side-navigation{overscroll-behavior:contain}
+
+
+/* Three independent YouTube channels — compact account picker on the YouTube page. */
+.youtube-accounts-switcher{margin:0 0 15px;max-width:1050px;padding:14px 17px;background:var(--card);border:1px solid var(--border);border-radius:11px}
+.youtube-accounts-switcher[hidden]{display:none!important}
+.youtube-switcher-heading{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:11px}
+.youtube-switcher-heading>div{display:flex;align-items:center;gap:9px}
+.youtube-switcher-heading strong{font-size:12px;font-weight:660}
+.youtube-switcher-heading small{color:var(--sub);font-size:10px}
+.youtube-switcher-heading button{min-height:32px;font-size:11px}
+.youtube-channel-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.youtube-switcher-card{display:flex;align-items:center;min-width:0;border:1px solid var(--border);background:var(--field);border-radius:9px;padding:5px 6px 5px 4px}
+.youtube-switcher-card.selected{border-color:var(--accent);background:var(--hover)}
+.youtube-switcher-choice{display:flex;align-items:center;flex:1;min-width:0;gap:9px;border:0;background:transparent;color:var(--text);padding:5px;text-align:left}
+.youtube-switcher-choice img,.youtube-switcher-placeholder{width:32px;height:32px;object-fit:cover;border-radius:50%;flex:none;background:var(--hover)}
+.youtube-switcher-placeholder{display:grid;place-items:center;font-size:12px;color:var(--sub)}
+.youtube-switcher-name{display:flex;flex-direction:column;gap:4px;min-width:0}
+.youtube-switcher-name strong{font-size:11px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.youtube-switcher-name small{font-size:10px;color:var(--sub);white-space:nowrap}
+.youtube-switcher-card.selected .youtube-switcher-name small{color:var(--accent)}
+.youtube-switcher-remove{width:25px;height:25px;border:0;border-radius:6px;background:transparent;color:var(--sub);font-size:20px;line-height:1}
+.youtube-switcher-remove:hover{background:var(--hover);color:var(--danger)}
+.youtube-switcher-remove:focus-visible,.youtube-switcher-choice:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.account-link-details>small{color:var(--hint);font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media(max-width:790px){.youtube-channel-options{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:530px){.youtube-channel-options{grid-template-columns:1fr}.youtube-accounts-switcher{padding:12px}.youtube-switcher-heading>div{flex-direction:column;align-items:flex-start;gap:3px}.youtube-switcher-heading button{font-size:10px;padding:7px 9px}}
