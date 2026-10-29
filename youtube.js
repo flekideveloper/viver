@@ -9,7 +9,7 @@
  const time=v=>{const d=new Date(v);return Number.isNaN(d.getTime())?'—':d.toLocaleString(ua()?'uk-UA':'en-US',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})};
  const panel=$('#youtube-live-panel'),status=$('#youtube-live-status'),dataEl=$('#youtube-live-data'),button=$('#youtube-refresh');
  if(!panel||!window.VIVERConnections)return;
- let model=null,loading=false,lastFetch=0,wasConnected=false,errorMessage='';
+ let model=null,loading=false,lastFetch=0,wasConnected=false,errorMessage='',revision=0;
  const client=window.VIVERConnections;
  const linked=()=>client.getConnections().some(x=>x.provider==='youtube'&&x.connected);
  function state(message){
@@ -55,13 +55,14 @@
  }
  async function load(force=false){
   if(!linked()||loading||(model&&!force&&Date.now()-lastFetch<60000))return;
+  const sequence=++revision;
   loading=true;errorMessage='';render();
   try{
    const x=await client.request('/youtube/stats');
-   if(!linked())return;
+   if(sequence!==revision||!linked())return;
    model=x;lastFetch=Date.now();state('');render();
   }catch(e){
-   if(!linked())return;
+   if(sequence!==revision||!linked())return;
    model=null;
    const error=String(e.message||'');
    const messages={
@@ -73,7 +74,7 @@
     youtube_api_unavailable:tr('YouTube API наразі недоступний. Спробуй згодом.','YouTube API is unavailable. Try again later.')
    };
    dataEl.hidden=true;errorMessage=messages[error]||tr('Не вдалося отримати статистику YouTube. Перевір з’єднання та повтори спробу.','Could not load YouTube statistics. Check your connection and retry.');
-  }finally{loading=false;render()}
+  }finally{if(sequence===revision){loading=false;render()}}
  }
  function update(){
   const isConnected=linked();
@@ -81,6 +82,11 @@
   const justConnected=!wasConnected;wasConnected=true;render();
   if($('#page-youtube')?.classList.contains('active'))load(justConnected);
  }
+ window.addEventListener('viver-youtube-channel-switched',()=>{
+  revision++;model=null;loading=false;lastFetch=0;errorMessage='';wasConnected=false;
+  render();
+  if($('#page-youtube')?.classList.contains('active'))load();
+ });
  window.addEventListener('viver-connections-updated',update);
  window.addEventListener('hashchange',update);
  document.addEventListener('click',ev=>{if(ev.target.closest('[data-page="youtube"],[data-goto="youtube"]'))setTimeout(update,0)});
