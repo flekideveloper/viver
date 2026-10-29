@@ -67,9 +67,12 @@ const mockFetch=async(url,opts)=>{
   if(dim==='day'){
    const date=new Date(u.searchParams.get('endDate')+'T12:00:00Z');
    const metrics=u.searchParams.get('metrics').split(',');
-   const rows=Array.from({length:14},(_,i)=>{
-    const d=new Date(date);d.setUTCDate(d.getUTCDate()-13+i);
-    const current=i>=7;
+   const startDate=new Date(u.searchParams.get('startDate')+'T12:00:00Z');
+   const requested=Math.round((date-startDate)/86400000)+1;
+   const count=requested>150?180:requested>60?60:14;
+   const rows=Array.from({length:count},(_,i)=>{
+    const d=new Date(date);d.setUTCDate(d.getUTCDate()-count+1+i);
+    const current=i>=count/2;
     const fields={views:current?200:100,likes:current?11:7,comments:current?3:2,shares:1,subscribersGained:current?3:2,subscribersLost:1,estimatedMinutesWatched:current?600:300};
     return [d.toISOString().slice(0,10),...metrics.map(k=>fields[k])];
    });
@@ -203,6 +206,17 @@ const req=(path,method='GET',origin='https://flekideveloper.github.io',token=key
  assert.equal((await (await worker.fetch(req('/youtube/analytics'),env)).json()).fromCache,true,'analytics report cached');
  assert.equal(seen.filter(x=>x.url.includes('youtubeanalytics.googleapis.com')).length,reportRequests,'cache avoids repeated YouTube API queries');
  assert.equal(analyticsCache.size,1,'analytics cache in separate table');
+ assert.equal((await worker.fetch(req('/youtube/analytics?days=0'),env)).status,400,'invalid period rejected');
+ const monthly=await (await worker.fetch(req('/youtube/analytics?days=30'),env)).json();
+ assert.equal(monthly.period.windowDays,30,'monthly report labelled');
+ assert.equal(monthly.daily.length,30,'thirty actual provider daily rows');
+ assert.equal(monthly.current.views,6000,'thirty-day views summed correctly');
+ assert.equal((await (await worker.fetch(req('/youtube/analytics?days=30'),env)).json()).fromCache,true,'monthly cache reused');
+ const quarterly=await (await worker.fetch(req('/youtube/analytics?days=90'),env)).json();
+ assert.equal(quarterly.period.windowDays,90,'quarterly report labelled');
+ assert.equal(quarterly.daily.length,90,'ninety actual provider daily rows');
+ assert.equal(quarterly.current.views,18000,'ninety-day views summed correctly');
+ assert.equal((await (await worker.fetch(req('/youtube/analytics'),env)).json()).period.windowDays,7,'weekly default stays compatible');
  assert.equal((await worker.fetch(req('/youtube/videos','GET','https://evil.example'),env)).status,403,'video library enforces frontend origin');
  assert.equal((await worker.fetch(req('/youtube/videos','GET','https://flekideveloper.github.io','bad'),env)).status,401,'video library requires capability');
  const videoResponse=await worker.fetch(req('/youtube/videos'),env);
