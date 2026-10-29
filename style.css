@@ -587,3 +587,7 @@ dialog{background:var(--card);border:1px solid var(--border);color:var(--text);b
  #page-youtube .youtube-live-panel,#page-youtube .studio-panel,.social-network-page .social-studio-panel{padding:15px}
  #page-youtube .creator-home-tools{grid-template-columns:1fr}
 }
+
+/* Keep connected network buttons reachable on small screens. */
+.sidebar{overflow-y:auto;scrollbar-width:thin}
+.sidebar-social .social-side-navigation{overscroll-behavior:contain}
