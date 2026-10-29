@@ -8,13 +8,13 @@
 <meta name="description" content="VIVER — простір для ідей, планування контенту та нагадувань.">
 <title>VIVER</title>
 <link rel="icon" href="./favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="./style.css?v=12">
+<link rel="stylesheet" href="./style.css?v=13">
 <script defer src="./app.js?v=8"></script>
 <script defer src="./features.js?v=7"></script>
-<script defer src="./connections.js?v=3"></script>
-<script defer src="./youtube.js?v=4"></script>
-<script defer src="./overview-analytics.js?v=4"></script>
-<script defer src="./creator-studio.js?v=3"></script>
+<script defer src="./connections.js?v=4"></script>
+<script defer src="./youtube.js?v=5"></script>
+<script defer src="./overview-analytics.js?v=5"></script>
+<script defer src="./creator-studio.js?v=4"></script>
 <script defer src="./platform-hub.js?v=3"></script>
 </head>
 <body>
@@ -149,6 +149,10 @@
 
   <section class="page social-network-page" id="page-youtube" aria-hidden="true">
    <div class="page-title"><h1>YouTube</h1></div>
+   <section class="youtube-accounts-switcher" id="youtube-accounts-switcher" hidden aria-label="Твої YouTube-канали">
+     <div class="youtube-switcher-heading"><div><strong id="youtube-accounts-title">Мої YouTube-канали</strong><small id="youtube-accounts-limit">1 із 3</small></div><button type="button" class="secondary-button" id="youtube-add-channel">+ <span id="youtube-add-channel-label">Додати канал</span></button></div>
+     <div id="youtube-channel-options" class="youtube-channel-options" role="group" aria-label="Обрати YouTube-канал"></div>
+   </section>
    <section class="panel youtube-live-panel" id="youtube-live-panel" data-platform-section="youtube" aria-label="Статистика YouTube" hidden>
     <div class="panel-title">
      <div class="youtube-heading"><span class="youtube-heading-mark">▶</span><h2> YouTube · <span id="youtube-section-title">Канал</span></h2></div>
