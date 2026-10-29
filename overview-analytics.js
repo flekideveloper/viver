@@ -114,7 +114,7 @@
    content.innerHTML='<div class="creator-overview-alert"><p>'+t('Підключи соцмережу, щоб побачити реальну статистику тут.','Connect a social account to see verified stats here.')+'</p><button class="secondary-button" type="button" data-creator-open-platforms="1">'+t('Підключити акаунт','Connect account')+'</button></div>';
    return;
   }
-  content.innerHTML=(yt?'<div class="creator-youtube-data">'+renderYouTube(yt)+'</div>':'')+list.filter(x=>x.provider!=='youtube').map(renderOther).join('');
+  content.innerHTML=yt?'<div class="creator-youtube-data">'+renderYouTube(yt)+'</div>':'';
  }
  async function load(force=false){
   const yt=connected().find(x=>x.provider==='youtube');if(!yt||loading)return;
@@ -136,19 +136,19 @@
   const yt=connected().find(x=>x.provider==='youtube');
   if(!yt){revision++;current=null;error='';lastFetch=0;activeChannel='';loading=false}
   render();
-  if(yt&&$('#page-home')?.classList.contains('active'))load();
+  if(yt&&$('#page-youtube')?.classList.contains('active'))load();
  }
  root.addEventListener('click',ev=>{
-  if(ev.target.closest('[data-creator-open-platforms]'))window.VIVERCore?.nav?.('platforms');
+  if(ev.target.closest('[data-creator-open-platforms]'))window.VIVERCore?.nav?.(connected().some(x=>x.provider==='youtube')?'youtube':'platforms');
   const provider=ev.target.closest('[data-creator-open-provider]');
-  if(provider){window.VIVERCore?.nav?.('platforms');window.VIVERPlatformHub?.select?.(provider.dataset.creatorOpenProvider);return}
+  if(provider){window.VIVERPlatformHub?.select?.(provider.dataset.creatorOpenProvider);return}
   if(ev.target.closest('[data-creator-reauthorize]'))client.start('youtube');
  });
  button.addEventListener('click',()=>{if(connected().some(x=>x.provider==='youtube'))load(true);else client.refresh()});
  window.addEventListener('viver-connections-updated',sync);
  window.addEventListener('hashchange',()=>setTimeout(sync,0));
- document.addEventListener('click',ev=>{if(ev.target.closest('[data-page="home"],[data-goto="home"]'))setTimeout(sync,0)});
+ document.addEventListener('click',ev=>{if(ev.target.closest('[data-page="youtube"],[data-goto="youtube"]'))setTimeout(sync,0)});
  $('#language')?.addEventListener('change',()=>setTimeout(render,0));
- window.VIVEROverviewAnalytics={load,render};
+ window.VIVEROverviewAnalytics={load,render,sync};
  sync();
 })();
