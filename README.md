@@ -64,6 +64,18 @@ date,platform,views,followers,likes,comments,shares
 
 Worker: `viver-auth.flekideveloper.workers.dev`. Окремий D1: `viver-oauth-db`. Код: [auth-worker/src/index.js](auth-worker/src/index.js). Ключі шифрування та OAuth-клієнтів додаються тільки у Cloudflare Secrets, не в репозиторій. Без ключів UI показує чесний статус «Потрібні ключі API» й кнопки підключення неактивні. Облікові записи VIVER поки не підтримуються: OAuth-прив'язки локальні для конкретного браузера. Статистика YouTube кешується на Worker приблизно на **10 хвилин** для обмеження API-квоти, а щоденні знімки зберігаються лише коли сторінка звертається до API. У Google режим Testing може обмежувати строк роботи refresh-токена.
 
+## Google Auth Platform — Branding / Production
+
+Для OAuth-застосунку **VIVER** використовуй такі публічні реквізити:
+- App name: `VIVER`
+- User support email: `flekideveloper@gmail.com`
+- Homepage URL: `https://flekideveloper.github.io/viver/`
+- Privacy Policy URL: `https://flekideveloper.github.io/viver/privacy.html`
+- Terms of Service URL: `https://flekideveloper.github.io/viver/terms.html`
+- Developer contact information: `flekideveloper@gmail.com`
+
+Якщо адреса `flekideveloper@gmail.com` не з'являється в полі **User support email**, увійди до Google Cloud саме під цим Google-акаунтом, який повинен мати доступ до OAuth-проєкту (наприклад, роль Editor). Порожній список **Google Groups managed by you** не заважає вибирати пошту поточного акаунта. Публікація Production не замінює Google OAuth verification, потрібну для певних YouTube scopes.
+
 ## Підключити другий або третій YouTube-канал
 
 Відкрий **YouTube** з лівого меню → **«Додати канал»** → пройди Google OAuth і обери потрібний YouTube-канал / Brand Account (якщо Google пропонує вибір). Після успішного входу його картка з'явиться поряд із попередніми, а він стане активним. Перемикай картки каналів, щоб змінювати статистику, відео, цілі та планер. Для четвертого каналу потрібно спочатку відключити один із трьох. **Не відключай усі канали**, якщо хочеш зберегти їхню серверну історію. Сторонні канали не можуть бути підключені без OAuth-згоди їхнього власника. У деяких налаштуваннях Google вибір Brand Account може не з'являтися, а у режимі Testing авторизацію дозволено тільки тестовим користувачам.
