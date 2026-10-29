@@ -110,6 +110,7 @@
   store();
  }
  function syncPlanner(){
+  if(!window.VIVERId?.getUser?.())return;
   const s=local();if(!s||!Array.isArray(data?.content)||!core?.state?.plans)return;
   let changed=false;
   for(const item of data.content){
@@ -167,6 +168,7 @@
     '<p class="social-empty">'+text('Після першого знімка VIVER помічатиме нові публікації, приріст фоловерів і досягнуті цілі під час використання сайту.','After the first snapshot, VIVER will notice uploads, follower growth and goal milestones while the site is open.')+'</p>');
  }
  function plannerView(){
+  if(!window.VIVERId?.getUser?.())return '<p class="social-empty">'+text('Планер потребує входу у VIVER ID. Аналітика доступна без нього.','Planner requires VIVER ID. Analytics stays accessible without an account.')+'</p>';
   const s=local();if(!s||!core)return '';
   const plans=core.state.plans.filter(p=>p.platform===selected);
   return '<p class="social-api-note">'+text('Точні збіги назв синхронізуються автоматично. Інші записи можна прив’язати вручну; VIVER нічого не публікує.','Exact matching titles sync automatically. Link other posts manually; VIVER never publishes content.')+'</p>'+
@@ -281,11 +283,11 @@
   }
  }
  function planOpen(id){
-  if(!core)return;
-  core.nav('planner');$('#plan-filter').value='all';core.renderPlans();
+  if(!core||!core.nav('planner'))return;$('#plan-filter').value='all';core.renderPlans();
   [...document.querySelectorAll('[data-plan-edit]')].find(x=>x.dataset.planEdit===id)?.click();
  }
  function connectPlan(id,planId){
+  if(!window.VIVERId?.getUser?.())return;
   const s=local(),p=core?.state?.plans?.find(x=>x.id===planId&&x.platform===selected);
   if(!s||!p||!data?.content?.some(x=>x.id===id))return;
   s.links[id]=p.id;p.status='published';
@@ -293,7 +295,7 @@
  }
  outer.addEventListener('click',ev=>{const button=ev.target.closest('[data-page]');if(button)select(button.dataset.page)});
  social.addEventListener('click',ev=>{
-  const btn=ev.target.closest('[data-social-inner]');if(btn){inner=btn.dataset.socialInner;renderSocial();return}
+  const btn=ev.target.closest('[data-social-inner]');if(btn){if(btn.dataset.socialInner==='planner'&&core?.requireId&&!core.requireId('planner'))return;inner=btn.dataset.socialInner;renderSocial();return}
   if(ev.target.closest('[data-social-reauthorize]')){auth.start(selected);return}
   const x=ev.target.closest('[data-social-goal-remove]');if(x){const s=local();s.goals=s.goals.filter(g=>g.id!==x.dataset.socialGoalRemove);store();renderSocial();return}
   if(ev.target.closest('[data-social-read]')){const s=local();for(const a of s.alerts)a.read=true;store();renderSocial();return}
@@ -302,6 +304,7 @@
   if(link){const select=[...social.querySelectorAll('[data-social-link-select]')].find(x=>x.dataset.socialLinkSelect===link.dataset.socialLink);if(select?.value)connectPlan(link.dataset.socialLink,select.value);return}
   const add=ev.target.closest('[data-social-import]');
   if(add){
+   if(!window.VIVERId?.getUser?.())return;
    const item=data?.content?.find(x=>x.id===add.dataset.socialImport),s=local();
    if(!item||!s||!core||core.state.plans.length>=500)return;
    const existing=core.state.plans.find(p=>p.id===s.links[item.id]);
