@@ -17,6 +17,7 @@ const fixture=p=>({
  history:[{date:'2026-10-21',metrics:{followers:90}},{date:'2026-10-28',metrics:{followers:p==='twitch'?126:p==='tiktok'?404:83}}],
  updatedAt:Date.now()
 });
+w.VIVERId={getUser:()=>({id:'platform-test',username:'platform'})};
 w.VIVERConnections={
  getConnections:()=>providers.map(provider=>({provider,label:provider+' Creator',connected:true})),
  getStatus:()=> 'ready',request:async route=>{requests.push(route);const p=route.match(/^\/social\/(twitch|tiktok|x)\/overview$/)?.[1];if(!p)throw Error(route);return fixture(p)},
