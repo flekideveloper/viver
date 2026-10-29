@@ -42,6 +42,14 @@ const t=k=>translations[state.language]?.[k]||k;
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(state));return true}catch(e){toast(t('storageFail'));return false}};
 const icon=name=>'<svg><use href="#i-'+name+'"></use></svg>';
 let page='home',editingPlan='',editingReminder='',reminderFilter='open',noteColor='yellow',zoom=1,boardCentered=false,drag=null,toastTimer;
+const ID_ONLY_PAGES=new Set(['planner','calendar','board','teams']);
+let requestedIdPage=null;
+const hasViverId=()=>Boolean(window.VIVERId?.getUser?.());
+function requireId(target){
+ if(!ID_ONLY_PAGES.has(target)||hasViverId())return true;
+ nav(target);
+ return false;
+}
 const dateFmt=s=>new Date(s).toLocaleString(state.language==='uk'?'uk-UA':'en-US',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',year:'numeric'});
 const timeMs=s=>new Date(s).getTime();
 const stageLabel=s=>({script:state.language==='uk'?'Сценарій':'Script',record:state.language==='uk'?'Запис':'Recording',edit:state.language==='uk'?'Монтаж':'Editing'})[s]||t(({idea:'idea',draft:'draft',ready:'ready',published:'published'})[s]||'idea');
@@ -58,6 +66,9 @@ function lang(){
 }
 function nav(next,updateHash=true){
  if(!['home','planner','calendar','reminders','board','platforms','settings','teams',...PROVIDER_PAGES].includes(next))next='home';
+ const denied=ID_ONLY_PAGES.has(next)&&!hasViverId();
+ if(denied){requestedIdPage=next;next='settings'}
+ else if(next!=='settings')requestedIdPage=null;
  if(PROVIDER_PAGES.includes(next)){
   const linked=window.VIVERConnections?.getConnections?.().some(x=>x.provider===next&&x.connected);
   if(!linked)next='platforms';
@@ -72,6 +83,8 @@ function nav(next,updateHash=true){
  if(page==='board')renderBoard();
  window.VIVERExtras?.onNavigate?.(page);
  window.scrollTo({top:0,behavior:'instant'});
+ if(denied)toast(state.language==='uk'?'Для цього розділу увійди у VIVER ID в Налаштуваннях.':'Sign in to VIVER ID in Settings to use this section.');
+ return !denied;
 }
 $$('[data-page]').forEach(el=>el.addEventListener('click',()=>nav(el.dataset.page)));
 // Connected social links are managed by platform-hub.js after OAuth verification.
@@ -82,13 +95,14 @@ window.addEventListener('popstate',syncLocation);
 $('#menu').addEventListener('click',()=>{$('#sidebar').classList.toggle('open');$('#scrim').classList.toggle('show')});
 $('#scrim').addEventListener('click',()=>{$('#sidebar').classList.remove('open');$('#scrim').classList.remove('show')});
 function renderHome(){
- $('#stat-plans').textContent=state.plans.filter(p=>p.status!=='published').length;
+ const allowed=hasViverId();
+ $('#stat-plans').textContent=allowed?state.plans.filter(p=>p.status!=='published').length:'—';
  $('#stat-reminders').textContent=state.reminders.filter(r=>!r.done).length;
- $('#stat-notes').textContent=state.notes.length;
+ $('#stat-notes').textContent=allowed?state.notes.length:'—';
  const rem=state.reminders.filter(r=>!r.done).sort((a,b)=>timeMs(a.due)-timeMs(b.due)).slice(0,5);
  const plans=state.plans.filter(p=>p.status!=='published').sort((a,b)=>timeMs(a.date)-timeMs(b.date)).slice(0,5);
  $('#home-reminders').innerHTML=rem.length?rem.map(r=>'<button type="button" class="compact-item compact-action" data-home-reminder="'+esc(r.id)+'"><span><strong>'+esc(r.title)+'</strong><small>'+esc(dateFmt(r.due))+'</small></span>'+(timeMs(r.due)<Date.now()?'<b class="overdue">!</b>':'')+'</button>').join(''):empty('noReminders');
- $('#home-plans').innerHTML=plans.length?plans.map(p=>'<button type="button" class="compact-item compact-action" data-home-plan="'+esc(p.id)+'"><span><strong>'+esc(p.title)+'</strong><small>'+esc(p.platform.toUpperCase())+' · '+esc(stageLabel(p.status))+'</small></span><span class="compact-date">'+esc(dateFmt(p.date))+'</span></button>').join(''):empty('noPlans');
+ $('#home-plans').innerHTML=!allowed?'<div class="empty-state">'+(state.language==='uk'?'Увійди у VIVER ID, щоб відкрити Планер.':'Sign in to VIVER ID to open Planner.')+'</div>':plans.length?plans.map(p=>'<button type="button" class="compact-item compact-action" data-home-plan="'+esc(p.id)+'"><span><strong>'+esc(p.title)+'</strong><small>'+esc(p.platform.toUpperCase())+' · '+esc(stageLabel(p.status))+'</small></span><span class="compact-date">'+esc(dateFmt(p.date))+'</span></button>').join(''):empty('noPlans');
  const open=state.reminders.filter(r=>!r.done).length;
  $('#nav-reminder-count').textContent=open;$('#nav-reminder-count').hidden=!open;
 }
@@ -97,7 +111,7 @@ for(const [root,key,selector,target] of [['#home-plans','homePlan','[data-plan-e
   const btn=ev.target.closest('[data-'+(key==='homePlan'?'home-plan':'home-reminder')+']');if(!btn)return;
   const id=btn.dataset[key];
   if(target==='planner'){$('#plan-filter').value='all';renderPlans()}
-  nav(target);
+  if(!nav(target))return;
   const action=$$(selector).find(x=>x.dataset[key==='homePlan'?'planEdit':'reminderEdit']===id);action?.click();
  });
 }
@@ -305,9 +319,9 @@ function renderSearch(){
  const q=searchInput.value.trim().toLowerCase();
  if(!q){$('#search-results').innerHTML='';return}
  const arr=[
- ...state.plans.filter(p=>p.title.toLowerCase().includes(q)||p.notes.toLowerCase().includes(q)||(p.checks||[]).some(ch=>ch.text.toLowerCase().includes(q))).slice(0,10).map(p=>({id:p.id,title:p.title,kind:t('planner'),target:'planner'})),
+ ...(hasViverId()?state.plans:[]).filter(p=>p.title.toLowerCase().includes(q)||p.notes.toLowerCase().includes(q)||(p.checks||[]).some(ch=>ch.text.toLowerCase().includes(q))).slice(0,10).map(p=>({id:p.id,title:p.title,kind:t('planner'),target:'planner'})),
  ...state.reminders.filter(r=>r.title.toLowerCase().includes(q)).slice(0,10).map(r=>({id:r.id,title:r.title,kind:t('reminders'),target:'reminders'})),
- ...state.notes.filter(n=>n.text.toLowerCase().includes(q)||String(n.group||'').toLowerCase().includes(q)).slice(0,10).map(n=>({title:n.text||t('emptyNote'),kind:t('board'),target:'board',note:n.id}))
+ ...(hasViverId()?state.notes:[]).filter(n=>n.text.toLowerCase().includes(q)||String(n.group||'').toLowerCase().includes(q)).slice(0,10).map(n=>({title:n.text||t('emptyNote'),kind:t('board'),target:'board',note:n.id}))
  ].slice(0,25);
  $('#search-results').innerHTML=arr.length?arr.map(a=>'<button class="search-result" type="button" data-search-target="'+a.target+'" data-search-note="'+esc(a.note||'')+'" data-search-id="'+esc(a.id||'')+'"><span>'+esc(a.title.slice(0,130))+'</span><small>'+esc(a.kind)+'</small></button>').join(''):empty('noResults');
 }
@@ -319,7 +333,7 @@ $('#search-results').addEventListener('click',ev=>{
  searchDialog.close();
  if(item.dataset.searchTarget==='planner'){$('#plan-filter').value='all';renderPlans()}
  if(item.dataset.searchTarget==='reminders'){reminderFilter='all';renderReminders()}
- nav(item.dataset.searchTarget);
+ if(!nav(item.dataset.searchTarget))return;
  if(item.dataset.searchId){
   const sel=item.dataset.searchTarget==='planner'?'[data-plan-edit]':'[data-reminder-edit]';
   const name=item.dataset.searchTarget==='planner'?'planEdit':'reminderEdit';
@@ -334,6 +348,12 @@ document.addEventListener('keydown',ev=>{
  if((ev.ctrlKey||ev.metaKey)&&ev.key.toLowerCase()==='k'){ev.preventDefault();if(searchDialog.open)searchDialog.close();else openSearch()}
  if(ev.key==='Escape'){$('#sidebar').classList.remove('open');$('#scrim').classList.remove('show')}
 });
-window.VIVERCore={get state(){return state},save,renderHome,renderPlans,renderReminders,renderBoard,nav,toast,esc,t,dateFmt,stageLabel,uid,normalise,validDate,get page(){return page},get noteColor(){return noteColor}};
+document.addEventListener('viver-id-changed',()=>{
+ renderHome();
+ if(searchDialog.open)renderSearch();
+ if(!hasViverId()&&ID_ONLY_PAGES.has(page)){nav('settings');return}
+ if(hasViverId()&&requestedIdPage){const target=requestedIdPage;requestedIdPage=null;nav(target)}
+});
+window.VIVERCore={get state(){return state},save,renderHome,renderPlans,renderReminders,renderBoard,nav,requireId,hasViverId,toast,esc,t,dateFmt,stageLabel,uid,normalise,validDate,get page(){return page},get noteColor(){return noteColor}};
 defaults();renderTheme();setZoom(1);lang();nav(['home','planner','calendar','reminders','board','platforms','settings','teams',...PROVIDER_PAGES].includes(location.hash.slice(1))?location.hash.slice(1):'home',false);notifyDue();
 })();
