@@ -20,7 +20,7 @@
   return say('Підключити','Connect');
  };
  const fields={providers:{},connections:[],youtubeChannels:[],activeYoutubeChannel:null,maxYoutubeChannels:3};
- let status='loading',busy=new Set(),popup=null,timer=null,lastRefresh=0;
+ let status='loading',busy=new Set(),popup=null,timer=null,lastRefresh=0,refreshSerial=0;
  function getKey(){
   try{
    let k=localStorage.getItem(KEY);
@@ -44,13 +44,13 @@
  function stateRow(provider){
   const active=fields.connections.find(x=>x.provider===provider.id&&x.connected);
   const expired=fields.connections.find(x=>x.provider===provider.id&&!x.connected);
-  const ready=Boolean(fields.providers[provider.id]),disabled=busy.has(provider.id)||status==='loading'||(!active&&!ready);
+  const ready=Boolean(fields.providers[provider.id]),disabled=busy.has(provider.id)||status==='loading'||status==='offline'||(!active&&!ready);
   const label=active?say('Підключено','Connected'):expired?say('Час підключити знову','Reconnect needed'):ready?say('Не підключено','Not connected'):say('Потрібні ключі API','API keys required');
   const action=buttonLabel(ready,!!active);
   const statusClass=active?'linked':ready?'ready':'inactive';
   if(provider.id==='youtube'){
    const channels=fields.youtubeChannels,amount=channels.length,max=fields.maxYoutubeChannels;
-   const add=ready&&amount<max?'<button type="button" class="secondary-button account-action" data-youtube-add="1" '+(busy.has('youtube')?'disabled':'')+'>'+say('+ Додати канал','+ Add channel')+'</button>':'';
+   const add=ready&&status!=='offline'&&amount<max?'<button type="button" class="secondary-button account-action" data-youtube-add="1" '+(busy.has('youtube')||status==='offline'?'disabled':'')+'>'+say('+ Додати канал','+ Add channel')+'</button>':'';
    const manage=amount?'<span class="account-link-status '+statusClass+'">'+escapeHTML(say('Каналів: ','Channels: ')+amount+'/'+max)+'</span>':'<span class="account-link-status '+statusClass+'">'+escapeHTML(label)+'</span>';
    return '<div class="account-link-row"><span class="account-brand account-youtube">▶</span><div class="account-link-details"><strong>YouTube</strong>'+manage+'<small>'+escapeHTML(active?.label||'')+'</small></div>'+add+
    (amount?'<button type="button" class="secondary-button account-action" data-auth-provider="youtube" data-auth-mode="disconnect" '+(disabled?'disabled':'')+'>'+say('Відключити всі','Disconnect all')+'</button>':
@@ -68,12 +68,12 @@
   $('#youtube-accounts-limit').textContent=list.length+' / '+limit;
   $('#youtube-add-channel-label').textContent=say('Додати канал','Add channel');
   $('#youtube-add-channel').hidden=list.length>=limit;
-  $('#youtube-add-channel').disabled=busy.has('youtube');
+  $('#youtube-add-channel').disabled=busy.has('youtube')||status==='offline';
   $('#youtube-channel-options').innerHTML=list.map(c=>{
    const selected=c.id===activeId;
    const image=c.avatar&&/^https:\/\//.test(c.avatar)?'<img src="'+escapeHTML(c.avatar)+'" referrerpolicy="no-referrer" alt="">':'<span class="youtube-switcher-placeholder">▶</span>';
-   return '<div class="youtube-switcher-card '+(selected?'selected':'')+'"><button type="button" class="youtube-switcher-choice" data-youtube-select="'+escapeHTML(c.id)+'" aria-pressed="'+selected+'" '+(busy.has('youtube')?'disabled':'')+'>'+image+'<span class="youtube-switcher-name"><strong>'+escapeHTML(c.label)+'</strong><small>'+(selected?say('Активний канал','Active channel'):say('Перемкнутися','Switch channel'))+'</small></span></button>'+
-    '<button type="button" class="youtube-switcher-remove" data-youtube-remove="'+escapeHTML(c.id)+'" title="'+say('Відключити тільки цей канал','Disconnect this channel')+'" aria-label="'+say('Відключити канал ','Disconnect channel ')+escapeHTML(c.label)+'" '+(busy.has('youtube')?'disabled':'')+'>×</button></div>';
+   return '<div class="youtube-switcher-card '+(selected?'selected':'')+'"><button type="button" class="youtube-switcher-choice" data-youtube-select="'+escapeHTML(c.id)+'" aria-pressed="'+selected+'" '+(busy.has('youtube')||status==='offline'?'disabled':'')+'>'+image+'<span class="youtube-switcher-name"><strong>'+escapeHTML(c.label)+'</strong><small>'+(selected?say('Активний канал','Active channel'):say('Перемкнутися','Switch channel'))+'</small></span></button>'+
+    '<button type="button" class="youtube-switcher-remove" data-youtube-remove="'+escapeHTML(c.id)+'" title="'+say('Відключити тільки цей канал','Disconnect this channel')+'" aria-label="'+say('Відключити канал ','Disconnect channel ')+escapeHTML(c.label)+'" '+(busy.has('youtube')||status==='offline'?'disabled':'')+'>×</button></div>';
   }).join('');
  }
  async function chooseYoutubeChannel(id){
@@ -103,7 +103,7 @@
   box.innerHTML=PROVIDERS.map(stateRow).join('');
   renderYoutubeSwitcher();
   if(note){
-   if(status==='offline')note.textContent=say('Сервер підключень зараз недоступний.','Connection server is currently unavailable.');
+   if(status==='offline')note.textContent=say('Сервер підключень недоступний. Показано останній відомий стан; дії тимчасово вимкнені.','Connection server unavailable. Last known status is shown; actions are temporarily disabled.');
    else if(status==='loading')note.textContent=say('Перевірка підключень…','Checking connections…');
    else if(Object.values(fields.providers).some(Boolean))note.textContent=say('Доступ надається лише після підтвердження на сайті платформи.','Access is granted only after approval on the platform.');
    else note.textContent=say('Для авторизації потрібно додати ключі застосунків у Cloudflare.','To enable sign-in, configure app credentials in Cloudflare.');
@@ -111,12 +111,19 @@
  }
  async function refresh(){
   if(status==='loading'&&lastRefresh)return;
+  const requestId=++refreshSerial;
   try{
-   const previousChannel=fields.activeYoutubeChannel;
    const data=await request('/connections');
+   // Discard stale responses from an earlier request (including earlier switches).
+   if(requestId!==refreshSerial)return;
+   const previousChannel=fields.activeYoutubeChannel;
    fields.providers=data.providers||{};fields.connections=data.connections||[];fields.youtubeChannels=data.youtubeChannels||[];fields.activeYoutubeChannel=data.activeYoutubeChannel||null;fields.maxYoutubeChannels=data.maxYoutubeChannels||3;status='ready';lastRefresh=Date.now();
    if(previousChannel!==fields.activeYoutubeChannel)window.dispatchEvent(new CustomEvent('viver-youtube-channel-switched',{detail:{channelId:fields.activeYoutubeChannel}}));
-  }catch{status='offline';fields.providers={};fields.connections=[];fields.youtubeChannels=[];fields.activeYoutubeChannel=null}
+  }catch{
+   if(requestId!==refreshSerial)return;
+   // A temporary offline error must not be treated as a genuine disconnection.
+   status='offline';
+  }
   render();
   window.dispatchEvent(new Event('viver-connections-updated'));
  }
