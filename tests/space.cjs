@@ -46,6 +46,7 @@ const DB={prepare(sql){let args=[];
    else if(sql.startsWith('INSERT INTO team_tasks'))tasks.set(a,{id:a,team_id:b,title:c,description:d,status:e,due:f,assignee_id:g,created_by:h,created_at:i,updated_at:j});
    else if(sql.startsWith('UPDATE team_tasks SET')){const x=tasks.get(f);if(!x||x.team_id!==g)changes=0;else Object.assign(x,{title:a,description:b,status:c,due:d,updated_at:e})}
    else throw Error('unmocked run '+sql);
+   if(sql.includes('workspaces'))console.log('DEBUG SQL',sql,args);
    return {success:true,meta:{changes}}
   }
  };
@@ -83,6 +84,7 @@ async function run(route,method='GET',token='',data=null,origin){
  const saved=await run('/v1/workspace','PUT',token,{version:0,workspace:{workspace:{plans:[{title:'private plan'}]}}});
  assert.equal(saved.status,200);
  assert.equal(saved.body.version,1);
+ console.log('DEBUG WORKSPACE',saved,workspaces.size,[...workspaces.entries()]);
  assert.equal(workspaces.size,1,'cloud database row created');
  assert.equal(workspaces.get(u.id)?.version,1,'cloud row keeps correct numeric version');
  assert.equal((await run('/v1/workspace','PUT',token,{version:0,workspace:{}})).status,409,'version conflict avoids lost updates');
