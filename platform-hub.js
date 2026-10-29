@@ -291,7 +291,7 @@
   s.links[id]=p.id;p.status='published';
   core.save();core.renderHome();core.renderPlans();store();renderSocial();
  }
- outer.addEventListener('click',()=>setTimeout(sync,0));
+ outer.addEventListener('click',ev=>{const button=ev.target.closest('[data-page]');if(button)select(button.dataset.page)});
  social.addEventListener('click',ev=>{
   const btn=ev.target.closest('[data-social-inner]');if(btn){inner=btn.dataset.socialInner;renderSocial();return}
   if(ev.target.closest('[data-social-reauthorize]')){auth.start(selected);return}
