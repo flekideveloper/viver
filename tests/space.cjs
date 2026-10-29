@@ -83,6 +83,8 @@ async function run(route,method='GET',token='',data=null,origin){
  const saved=await run('/v1/workspace','PUT',token,{version:0,workspace:{workspace:{plans:[{title:'private plan'}]}}});
  assert.equal(saved.status,200);
  assert.equal(saved.body.version,1);
+ assert.equal(workspaces.size,1,'cloud database row created');
+ assert.equal(workspaces.get(u.id)?.version,1,'cloud row keeps correct numeric version');
  assert.equal((await run('/v1/workspace','PUT',token,{version:0,workspace:{}})).status,409,'version conflict avoids lost updates');
  assert.equal((await run('/v1/workspace','GET',token)).body.workspace.workspace.plans[0].title,'private plan');
  const second=await run('/v1/auth/register','POST','',{username:'editor_two',password:'Secure789pass'});
