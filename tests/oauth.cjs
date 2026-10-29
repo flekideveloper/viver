@@ -178,6 +178,7 @@ const req=(path,method='GET',origin='https://flekideveloper.github.io',token=key
  assert.equal(youtubeCache.size,1,'cache stored privately');assert.equal(snapshots.size,1,'history stored privately');
  const authorize=await (await worker.fetch(req('/auth/start/youtube','POST'),env)).json();
  assert(new URL(authorize.url).searchParams.get('scope').includes('yt-analytics.readonly'),'YouTube now requests read-only Analytics permission');
+ pending.delete(new URL(authorize.url).searchParams.get('state')); // This simulated scope probe never completes OAuth.
  assert.equal((await worker.fetch(req('/youtube/analytics','GET','https://evil.example'),env)).status,403,'analytics CORS denies unknown domain');
  assert.equal((await worker.fetch(req('/youtube/analytics','GET','https://flekideveloper.github.io','bad'),env)).status,401,'analytics requires local capability');
  const analyticsResponse=await worker.fetch(req('/youtube/analytics'),env);
