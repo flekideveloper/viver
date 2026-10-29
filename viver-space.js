@@ -6,6 +6,7 @@
  if(!c||!settings||!main||!nav)return;
  const ua=()=>document.documentElement.lang!=='en',t=(a,b)=>ua()?a:b;
  const esc=x=>String(x??'').replace(/[&<>"']/g,k=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','"':'&quot;',"'":'&#39;'}[k]));
+ const validPassword=s=>typeof s==='string'&&s.length>=6&&s.length<=128&&(s.match(/\p{L}/gu)||[]).length>=4&&/[0-9]/.test(s)&&/[^\p{L}0-9\s]/u.test(s);
  let token=localStorage.getItem(KEY)||'',user=null,mode='login',recovery='',error='',busy=false,teamList=[],team=null,teamId='',invite='',cloudVersion=null;
  const node=(tag,html)=>{const e=document.createElement(tag);e.innerHTML=html;return e};
  const authBox=node('section','<div class="vs-title"><h2>VIVER ID</h2><small id="vs-auth-status"></small></div><div id="vs-auth-content"></div>');
@@ -40,11 +41,11 @@
     '<p class="vs-hint">'+t('Хмарна копія включає планер, нагадування, стікери й локальні налаштування Studio. OAuth-ключі не передаються. Відновлення замінює локальні записи тільки після підтвердження.','Cloud backup includes planner, reminders, notes and local Studio preferences. OAuth keys are not uploaded. Restore replaces local records only after your confirmation.')+'</p>';
   }else{
    const heading=mode==='register'?t('Реєстрація','Create account'):mode==='recover'?t('Відновлення за ключем','Recover with key'):t('Вхід','Sign in');
-   const help=mode==='register'?t('Юзернейм 3–24 символи. Пароль від 10 символів: літери й цифри. Після реєстрації обов’язково збережи ключ відновлення.','Username 3–24 characters. Password at least 10 characters with letters and numbers. Save your recovery key after signup.'):mode==='recover'?t('Введи юзернейм, ключ відновлення і новий пароль. Старі сесії буде завершено.','Enter username, recovery key and a new password. Old sessions will be revoked.'):'';
+   const help=mode==='register'?t('Юзернейм 3–24 символи. Пароль: 6–128 символів, мінімум 4 літери, 1 цифра та 1 спеціальний символ. Збережи ключ відновлення.','Username 3–24 characters. Password: 6–128 characters, at least 4 letters, 1 digit and 1 special character. Save your recovery key.'):mode==='recover'?t('Новий пароль: 6–128 символів, мінімум 4 літери, 1 цифра та 1 спеціальний символ. Старі сесії буде завершено.','New password: 6–128 characters, at least 4 letters, 1 digit and 1 special character. Previous sessions will be revoked.'):'';
    box.innerHTML='<div class="vs-tabs"><button type="button" data-vs-mode="login" class="'+(mode==='login'?'active':'')+'">'+t('Вхід','Login')+'</button><button type="button" data-vs-mode="register" class="'+(mode==='register'?'active':'')+'">'+t('Реєстрація','Register')+'</button><button type="button" data-vs-mode="recover" class="'+(mode==='recover'?'active':'')+'">'+t('Відновити','Recover')+'</button></div>'+
     '<form id="vs-auth-form" class="vs-form"><h3>'+heading+'</h3><label>'+t("Ім’я користувача","Username")+'<input name="username" required autocomplete="username" minlength="3" maxlength="24" pattern="[a-zA-Z0-9][a-zA-Z0-9._-]{2,23}" placeholder="creator_name"></label>'+
     (mode==='recover'?'<label>'+t('Ключ відновлення','Recovery key')+'<input name="recovery" required autocomplete="off" maxlength="43" minlength="43"></label>':'')+
-    '<label>'+t(mode==='recover'?'Новий пароль':'Пароль',mode==='recover'?'New password':'Password')+'<input name="password" type="password" required autocomplete="'+(mode==='login'?'current-password':'new-password')+'" minlength="'+(mode==='login'?1:10)+'" maxlength="128"></label>'+
+    '<label>'+t(mode==='recover'?'Новий пароль':'Пароль',mode==='recover'?'New password':'Password')+'<input name="password" type="password" required autocomplete="'+(mode==='login'?'current-password':'new-password')+'" minlength="'+(mode==='login'?1:6)+'" maxlength="128"></label>'+
     '<button type="submit" class="primary-button" '+(busy?'disabled':'')+'>'+heading+'</button><small>'+help+'</small></form>';
   }
   if(recovery){const p=node('div','<strong>'+t('Збережи цей ключ відновлення!','Save this recovery key!')+'</strong><p class="vs-monospace" id="vs-recovery-value"></p><button type="button" class="secondary-button" data-vs-action="copy-recovery">'+t('Копіювати ключ','Copy key')+'</button>');p.className='vs-recovery';p.querySelector('#vs-recovery-value').textContent=recovery;box.prepend(p)}
@@ -59,9 +60,15 @@
   if(action==='save')return cloudSave();
   if(action==='restore')return cloudRestore();
  });
+ authBox.addEventListener('input',e=>{if(e.target.matches('#vs-auth-form [name="password"]'))e.target.setCustomValidity('')});
  authBox.addEventListener('submit',async e=>{
   if(e.target.id!=='vs-auth-form')return;e.preventDefault();if(busy)return;
   const b=form(e.target);
+  if(mode!=='login'&&!validPassword(b.password)){
+   const field=e.target.elements.password;
+   field.setCustomValidity(t('Пароль: 6–128 символів, мінімум 4 літери, 1 цифра та 1 спеціальний символ.','Password: 6–128 characters, at least 4 letters, 1 digit and 1 special character.'));
+   field.reportValidity();return;
+  }
   busy=true;error='';render();
   try{
    const endpoint=mode==='register'?'register':mode==='recover'?'recover':'login';
