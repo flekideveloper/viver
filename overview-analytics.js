@@ -118,8 +118,9 @@
  }
  async function load(force=false){
   const yt=connected().find(x=>x.provider==='youtube');if(!yt||loading)return;
-  if(activeChannel&&activeChannel!==yt.label){current=null;error='';lastFetch=0}
-  activeChannel=yt.label;
+  const channelId=client.getActiveYoutubeChannel?.()||yt.label;
+  if(activeChannel&&activeChannel!==channelId){current=null;error='';lastFetch=0}
+  activeChannel=channelId;
   if(!force&&current&&Date.now()-lastFetch<120000)return;
   const seq=++revision;
   loading=true;render();
@@ -145,6 +146,11 @@
   if(ev.target.closest('[data-creator-reauthorize]'))client.start('youtube');
  });
  button.addEventListener('click',()=>{if(connected().some(x=>x.provider==='youtube'))load(true);else client.refresh()});
+ window.addEventListener('viver-youtube-channel-switched',()=>{
+  revision++;current=null;error='';loading=false;lastFetch=0;activeChannel='';
+  render();
+  if($('#page-youtube')?.classList.contains('active'))load();
+ });
  window.addEventListener('viver-connections-updated',sync);
  window.addEventListener('hashchange',()=>setTimeout(sync,0));
  document.addEventListener('click',ev=>{if(ev.target.closest('[data-page="youtube"],[data-goto="youtube"]'))setTimeout(sync,0)});
