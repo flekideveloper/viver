@@ -1,0 +1,69 @@
+/* VIVER Next: compact new features inherit all existing four themes. */
+.vs-card{border:1px solid var(--border);background:var(--card);border-radius:12px;padding:22px;margin:0 0 18px;min-width:0;max-width:1000px;color:var(--text)}
+#viver-id-card{max-width:830px}
+.vs-title{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.vs-title h2{margin:0;font-size:17px}
+.vs-title small,.vs-muted,.vs-hint{color:var(--sub);line-height:1.6}
+.vs-hint{font-size:11px;margin-top:14px;max-width:730px}
+.vs-muted{font-size:12px}
+.vs-error{color:var(--danger);padding:11px;background:color-mix(in srgb,var(--danger) 9%,var(--card));border:1px solid var(--danger);border-radius:8px;overflow-wrap:anywhere}
+.vs-recovery{padding:15px;margin:13px 0;border:1px solid var(--accent);border-radius:10px;background:var(--hover)}
+.vs-monospace,.vs-invite code{font:12px/1.5 ui-monospace,Consolas,monospace;display:block;padding:10px;background:var(--field);color:var(--text);border:1px solid var(--border);border-radius:7px;overflow-wrap:anywhere;word-break:break-word}
+.vs-form{display:grid;gap:14px;max-width:600px}
+.vs-form h3{font-size:15px;margin:4px 0 0}
+.vs-form label,.vs-detail-body>label,.vs-inline label{display:grid;gap:7px;font-size:12px;color:var(--sub);min-width:0}
+.vs-form input,.vs-form textarea,.vs-detail-body input,.vs-detail-body select,.vs-detail-body textarea,.vs-inline input,.vs-inline select,.vs-team-list button,.vs-task select{min-width:0;width:100%;background:var(--field);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:10px 11px;font-size:12px}
+.vs-form textarea,.vs-detail-body textarea{resize:vertical;line-height:1.55}
+.vs-form input:focus,.vs-form textarea:focus{border-color:var(--accent)}
+.vs-form small{color:var(--hint);font-size:11px;line-height:1.6}
+.vs-form>button{justify-self:start}
+.vs-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin:12px 0}
+.vs-tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+.vs-tabs button{border:1px solid var(--border);background:var(--field);color:var(--sub);padding:9px 14px;border-radius:7px;font-size:12px}
+.vs-tabs button.active{background:var(--hover);border-color:var(--accent);color:var(--text)}
+.vs-team-head{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:18px 0}
+.vs-inline{display:flex;flex-wrap:wrap;align-items:end;gap:8px}
+.vs-inline input{flex:1 1 150px}
+.vs-team-layout{display:grid;grid-template-columns:minmax(180px,230px) minmax(0,1fr);gap:16px;align-items:start}
+.vs-team-list{display:grid;align-content:start;gap:6px;border:1px solid var(--border);background:var(--field);border-radius:10px;padding:8px}
+.vs-team-list button{display:flex;flex-direction:column;align-items:flex-start;gap:4px;border:0;background:transparent;color:var(--sub);text-align:left}
+.vs-team-list button strong{color:var(--text);font-size:12px}
+.vs-team-list button small{font-size:10px}
+.vs-team-list button.active{background:var(--hover);outline:1px solid var(--accent)}
+.vs-team-detail{min-width:0}
+.vs-team-members{display:flex;gap:5px;flex-wrap:wrap;margin:14px 0}
+.vs-team-members span{font-size:10px;color:var(--sub);border-radius:15px;border:1px solid var(--border);padding:5px 9px}
+.vs-invite{border:1px solid var(--accent);border-radius:9px;padding:12px;margin:12px 0;background:var(--field)}
+.vs-invite p{font-size:12px;color:var(--sub);margin-bottom:8px}
+.vs-invite button{margin-top:9px}
+.vs-task-create{margin-top:16px}
+.vs-task-list{display:grid;gap:7px;margin-top:15px}
+.vs-task{border:1px solid var(--border);background:var(--field);border-radius:9px;padding:11px;display:flex;align-items:center;gap:9px;justify-content:space-between;min-width:0}
+.vs-task div{min-width:0;overflow-wrap:anywhere}
+.vs-task strong{font-size:12px;font-weight:600}
+.vs-task small{display:block;font-size:10px;color:var(--hint);margin-top:4px}
+.vs-task select{width:auto;max-width:140px;flex-shrink:0}
+.vs-expander{max-width:100%;padding:0;margin:19px 0}
+.vs-expander summary{padding:17px 20px;cursor:pointer;font-size:13px;font-weight:650;color:var(--text)}
+.vs-expander summary:hover{color:var(--accent)}
+.vs-expander[open] summary{border-bottom:1px solid var(--border)}
+.vs-detail-body{padding:19px;display:grid;gap:14px}
+.vs-checkbox{display:flex;gap:9px;align-items:center;font-size:12px;color:var(--sub)}
+.vs-checkbox input{accent-color:var(--accent)}
+.vs-alert-list{display:grid;gap:7px}
+.vs-alert{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--sub);font-size:12px}
+.vs-alert.unread{border-color:var(--accent);color:var(--text)}
+.vs-alert span{overflow-wrap:anywhere;min-width:0}
+.vs-alert small{display:block;color:var(--hint);margin-top:4px;font-size:10px}
+.vs-analytics-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.vs-analytics-stats>div{display:grid;gap:10px;border:1px solid var(--border);background:var(--field);border-radius:9px;padding:17px;min-width:0}
+.vs-analytics-stats span{color:var(--sub);font-size:11px}
+.vs-analytics-stats strong{color:var(--text);font-size:25px;letter-spacing:-.04em;overflow-wrap:anywhere}
+.vs-detail-body h3{font-size:14px;margin:7px 0 0}
+.vs-spark{height:auto;max-height:160px;width:100%;color:var(--accent)}
+.vs-observations{display:grid;gap:7px}
+.vs-observations>div{display:flex;align-items:center;flex-wrap:wrap;gap:10px;border-bottom:1px solid var(--border);padding:10px 0;font-size:12px}
+.vs-observations>div strong{flex:1;min-width:140px}
+.vs-observations>div span,.vs-observations>div small{color:var(--sub);font-size:11px}
+@media(max-width:900px){.vs-team-head,.vs-team-layout{grid-template-columns:1fr}.vs-team-list{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}}
+@media(max-width:590px){.vs-card{padding:16px}.vs-expander{padding:0}.vs-expander summary{padding:14px}.vs-detail-body{padding:13px}.vs-analytics-stats{grid-template-columns:1fr}.vs-task{flex-wrap:wrap}.vs-task select{max-width:100%}.vs-title{align-items:flex-start}}
