@@ -8,7 +8,7 @@ const now=()=>Date.now();
 async function digest(s){return b64(new Uint8Array(await crypto.subtle.digest('SHA-256',encoder.encode(s))))}
 async function passwordHash(password,salt){
  const k=await crypto.subtle.importKey('raw',encoder.encode(password),'PBKDF2',false,['deriveBits']);
- const bits=await crypto.subtle.deriveBits({name:'PBKDF2',salt:from64(salt),iterations:120000,hash:'SHA-256'},k,256);
+ const bits=await crypto.subtle.deriveBits({name:'PBKDF2',salt:from64(salt),iterations:100000,hash:'SHA-256'},k,256);
  return b64(new Uint8Array(bits));
 }
 function equal(a,b){if(typeof a!=='string'||typeof b!=='string'||a.length!==b.length)return false;let mismatch=0;for(let i=0;i<a.length;i++)mismatch|=a.charCodeAt(i)^b.charCodeAt(i);return mismatch===0}
@@ -40,8 +40,15 @@ async function register(req,env){
  if(!name||!goodPass(b.password))return reply({error:'invalid_credentials_rules'},400);
  if(!await limit(env,req,'register','',5))return reply({error:'rate_limited'},429);
  const salt=rand(16),id=rand(18),recover=rand(),ts=now();
- try{await env.DB.prepare('INSERT INTO users(id,username,pass_salt,pass_hash,recovery_hash,created_at) VALUES(?,?,?,?,?,?)').bind(id,name,salt,await passwordHash(b.password,salt),await digest(recover),ts).run()}
- catch{return reply({error:'username_taken'},409)}
+ // Cloudflare workerd caps PBKDF2 at 100,000 iterations. Derive before the DB try
+ // so a cryptographic failure never masquerades as a duplicate username.
+ const passHash=await passwordHash(b.password,salt),recoveryHash=await digest(recover);
+ try{await env.DB.prepare('INSERT INTO users(id,username,pass_salt,pass_hash,recovery_hash,created_at) VALUES(?,?,?,?,?,?)').bind(id,name,salt,passHash,recoveryHash,ts).run()}
+ catch(e){
+  if(/UNIQUE constraint failed: users\.username|SQLITE_CONSTRAINT_UNIQUE/i.test(String(e?.message||'')))return reply({error:'username_taken'},409);
+  console.error('VIVER registration DB failure:',String(e?.message||'unknown'));
+  return reply({error:'registration_unavailable'},503);
+ }
  return reply({user:{id,username:name},token:await session(env,id),recovery:recover},201);
 }
 async function login(req,env){
