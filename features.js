@@ -78,6 +78,7 @@ function reminderAppearsOnDate(r,date){
 const remindersOnDate=date=>S().reminders.filter(r=>reminderAppearsOnDate(r,date));
 
 function renderCalendar(){
+ if(!c.hasViverId?.()){$('#calendar-content').replaceChildren();$('#calendar-day-items').replaceChildren();return}
  const month=calendarMonth.getMonth(),year=calendarMonth.getFullYear();
  $('#calendar-month').textContent=calendarMonth.toLocaleDateString(L()==='uk'?'uk-UA':'en-US',{month:'long',year:'numeric'});
  const start=new Date(year,month,1,12),offset=(start.getDay()+6)%7;
