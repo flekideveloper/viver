@@ -73,7 +73,7 @@ function nav(next,updateHash=true){
  window.VIVERExtras?.onNavigate?.(page);
  window.scrollTo({top:0,behavior:'instant'});
 }
-$('[data-page]').forEach(el=>el.addEventListener('click',()=>nav(el.dataset.page)));
+$$('[data-page]').forEach(el=>el.addEventListener('click',()=>nav(el.dataset.page)));
 // Connected social links are managed by platform-hub.js after OAuth verification.
 $$('[data-goto]').forEach(el=>el.addEventListener('click',()=>nav(el.dataset.goto)));
 const syncLocation=()=>{const key=location.hash.slice(1);if(key!==page)nav(key,false)};
