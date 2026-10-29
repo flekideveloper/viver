@@ -321,6 +321,13 @@
   render();
   if(core.page==='youtube')load();
  }
+ window.addEventListener('viver-youtube-channel-switched',()=>{
+  // A previous channel may still have pending video or retention requests.
+  seq++;catalog=null;channelStats=null;channel='';error='';loading=false;loadingStats=false;
+  selection='';comparison=null;retention=null;lastFetch=0;
+  render();
+  if(core.page==='youtube')load(true);
+ });
  window.addEventListener('viver-connections-updated',update);
  window.VIVERStudio={update,load,getCatalog:()=>catalog,openTab:jump};
  update();
