@@ -62,6 +62,8 @@ jobs:
         run: node tests/connections.cjs
       - name: Run VIVER Next browser integration tests
         run: node tests/next.cjs
+      - name: Verify guest access and protected workspace ID sessions
+        run: node tests/access.cjs
       - name: Test VIVER ID auth, cloud and Teams backend security
         run: node tests/space.cjs
       - name: Run OAuth backend tests
