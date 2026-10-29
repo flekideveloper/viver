@@ -8,14 +8,14 @@
 <meta name="description" content="VIVER — простір для ідей, планування контенту та нагадувань.">
 <title>VIVER</title>
 <link rel="icon" href="./favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="./style.css?v=11">
-<script defer src="./app.js?v=7"></script>
+<link rel="stylesheet" href="./style.css?v=12">
+<script defer src="./app.js?v=8"></script>
 <script defer src="./features.js?v=7"></script>
 <script defer src="./connections.js?v=3"></script>
-<script defer src="./youtube.js?v=3"></script>
-<script defer src="./overview-analytics.js?v=3"></script>
-<script defer src="./creator-studio.js?v=2"></script>
-<script defer src="./platform-hub.js?v=2"></script>
+<script defer src="./youtube.js?v=4"></script>
+<script defer src="./overview-analytics.js?v=4"></script>
+<script defer src="./creator-studio.js?v=3"></script>
+<script defer src="./platform-hub.js?v=3"></script>
 </head>
 <body>
 <svg class="sprites" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
@@ -48,6 +48,10 @@
   <button class="nav-item" data-page="board" type="button"><svg><use href="#i-board"/></svg><span data-t="board">Дошка ідей</span></button>
   <button class="nav-item" data-page="platforms" type="button"><svg><use href="#i-link"/></svg><span data-t="platforms">Статистика</span></button>
  </nav>
+ <div class="sidebar-social" id="sidebar-social" hidden>
+  <div class="nav-label" id="sidebar-social-heading">ПІДКЛЮЧЕНІ СОЦМЕРЕЖІ</div>
+  <nav class="navigation social-side-navigation" id="social-sidebar-nav" aria-label="Підключені соцмережі"></nav>
+ </div>
  <div class="sidebar-bottom"><button class="nav-item" data-page="settings" type="button"><svg><use href="#i-settings"/></svg><span data-t="settings">Налаштування</span></button><div class="local-label"><span class="local-dot"></span><span data-t="local">Дані на цьому пристрої</span></div></div>
 </aside>
 <div class="scrim" id="scrim"></div>
@@ -64,14 +68,6 @@
     <button class="stat" data-goto="reminders" type="button"><span data-t="openTasks">Активні нагадування</span><strong id="stat-reminders">0</strong><small data-t="tasks">Завдання</small></button>
     <button class="stat" data-goto="board" type="button"><span data-t="notes">Стікери</span><strong id="stat-notes">0</strong><small data-t="ideas">Ідеї</small></button>
    </div>
-   <section class="creator-overview" id="creator-overview" aria-label="Аналітика соцмереж">
-    <div class="creator-overview-top">
-      <div><h2 id="creator-overview-title">Аналітика соцмереж</h2><p id="creator-overview-subtitle">Показники підключених акаунтів</p></div>
-      <button class="secondary-button creator-refresh" type="button" id="creator-refresh"><span aria-hidden="true">↻</span><span id="creator-refresh-label">Оновити</span></button>
-    </div>
-    <div id="creator-overview-content" aria-live="polite" class="creator-overview-content"></div>
-   </section>
-   <section class="creator-home-tools" id="creator-home-tools" hidden aria-label="Цілі й сповіщення"><div id="creator-home-goals"></div><div id="creator-home-alerts"></div></section>
    <div class="overview-grid">
     <div class="panel"><div class="panel-title"><h2 data-t="upcoming">Найближче</h2><button class="text-button" type="button" data-goto="reminders" data-t="viewAll">Усі</button></div><div id="home-reminders" class="compact-list"></div></div>
     <div class="panel"><div class="panel-title"><h2 data-t="contentPlan">Контент-план</h2><button class="text-button" type="button" data-goto="planner" data-t="viewAll">Усі</button></div><div id="home-plans" class="compact-list"></div></div>
@@ -149,11 +145,10 @@
     <div class="connection-grid" id="viver-accounts" aria-live="polite"></div>
     <p class="connection-info" id="account-status-info"></p>
    </div>
-   <section class="connected-platform-hub" id="connected-platform-hub" hidden aria-label="Аналітика підключених платформ">
-    <div class="connected-platform-heading"><strong id="connected-platform-heading">Аналітика акаунтів</strong><span id="connected-platform-count"></span></div>
-    <div class="connected-platform-tabs" id="connected-platform-tabs" role="tablist" aria-label="Підключені платформи"></div>
-    <p class="connected-platform-hint" id="connected-platform-hint" hidden></p>
-   </section>
+  </section>
+
+  <section class="page social-network-page" id="page-youtube" aria-hidden="true">
+   <div class="page-title"><h1>YouTube</h1></div>
    <section class="panel youtube-live-panel" id="youtube-live-panel" data-platform-section="youtube" aria-label="Статистика YouTube" hidden>
     <div class="panel-title">
      <div class="youtube-heading"><span class="youtube-heading-mark">▶</span><h2> YouTube · <span id="youtube-section-title">Канал</span></h2></div>
@@ -168,6 +163,14 @@
       <div class="youtube-foot" id="youtube-live-foot"></div>
     </div>
    </section>
+   <section class="creator-overview" id="creator-overview" aria-label="Аналітика соцмереж">
+    <div class="creator-overview-top">
+      <div><h2 id="creator-overview-title">Аналітика соцмереж</h2><p id="creator-overview-subtitle">Показники підключених акаунтів</p></div>
+      <button class="secondary-button creator-refresh" type="button" id="creator-refresh"><span aria-hidden="true">↻</span><span id="creator-refresh-label">Оновити</span></button>
+    </div>
+    <div id="creator-overview-content" aria-live="polite" class="creator-overview-content"></div>
+   </section>
+   <section class="creator-home-tools" id="creator-home-tools" hidden aria-label="Цілі й сповіщення"><div id="creator-home-goals"></div><div id="creator-home-alerts"></div></section>
    <section class="panel studio-panel" id="studio-panel" data-platform-section="youtube" hidden aria-label="Creator Studio YouTube">
     <div class="studio-head">
       <div><h2 id="studio-heading">Мій YouTube · Creator Studio</h2><p id="studio-caption">Відео, планер, цілі, події й порівняння</p></div>
@@ -182,21 +185,26 @@
     </div>
     <div class="studio-body" id="studio-body" role="tabpanel" aria-live="polite"></div>
    </section>
-   <section class="panel social-studio-panel" id="social-studio-panel" data-platform-section="social" hidden>
+
+  </section>
+  <section class="page social-network-page" id="page-tiktok" aria-hidden="true">
+   <div class="page-title"><h1>TikTok</h1></div>
+   <div class="social-network-mount" id="social-mount-tiktok">   <section class="panel social-studio-panel" id="social-studio-panel" data-platform-section="social" hidden>
     <div class="social-studio-head"><div><h2 id="social-studio-title">Платформа</h2><p id="social-studio-subtitle">Аналітика підключеного акаунта</p></div>
       <button type="button" class="secondary-button" id="social-studio-reload">↻ <span id="social-studio-reload-label">Оновити</span></button>
     </div>
     <div class="social-studio-tabs" id="social-studio-tabs" role="tablist" aria-label="Інструменти платформи"></div>
     <div class="social-studio-content" id="social-studio-content" role="tabpanel" aria-live="polite"></div>
    </section>
-   <details class="imported-reports-collapse" id="imported-reports-collapse">
-     <summary id="imported-reports-summary">Імпортовані CSV/JSON звіти <span>⌄</span></summary>
-   <div class="panel analytics-panel"><div class="panel-title"><h2 data-t="statistics">Звіти</h2><div class="row-buttons"><button class="secondary-button" id="report-template" type="button" data-t="sampleCsv">Шаблон CSV</button><label class="secondary-button file-button" for="report-import"><svg><use href="#i-upload"/></svg><span data-t="importReport">Імпорт звіту</span><input id="report-import" type="file" accept=".csv,.json,text/csv,application/json" hidden></label></div></div>
-    <div class="analytics-filters"><label><span data-t="platform">Платформа</span><select id="analytics-provider"><option value="youtube">YouTube</option><option value="tiktok">TikTok</option><option value="twitch">Twitch</option><option value="x">X</option></select></label><label><span data-t="metric">Показник</span><select id="analytics-metric"><option value="views" data-t="views">Перегляди</option><option value="followers" data-t="followers">Підписники</option><option value="likes" data-t="likes">Вподобання</option><option value="comments" data-t="comments">Коментарі</option><option value="shares" data-t="shares">Поширення</option></select></label></div>
-    <div class="analytics-chart" id="analytics-chart"></div>
-    <div class="analytics-bottom"><small data-t="reportNote">Статистика лише з імпортованих звітів. Автоматичне підключення соцмереж ще недоступне.</small><button id="analytics-clear" type="button" class="text-button" data-t="clearReports">Видалити звіти</button></div>
-   </div>
-   </details>
+</div>
+  </section>
+  <section class="page social-network-page" id="page-twitch" aria-hidden="true">
+   <div class="page-title"><h1>Twitch</h1></div>
+   <div class="social-network-mount" id="social-mount-twitch"></div>
+  </section>
+  <section class="page social-network-page" id="page-x" aria-hidden="true">
+   <div class="page-title"><h1>X</h1></div>
+   <div class="social-network-mount" id="social-mount-x"></div>
   </section>
   <section class="page" id="page-settings">
    <div class="page-title"><h1 data-t="settings">Налаштування</h1></div>
@@ -212,6 +220,14 @@
     <div class="setting-row danger"><div><strong data-t="reset">Видалити локальні дані</strong></div><button type="button" class="danger-button" id="reset" data-t="delete">Видалити</button></div>
    </div>
    <p class="settings-footnote" data-t="storageNotice">Нагадування, планер і стікери зберігаються лише в цьому браузері.</p>
+   <details class="imported-reports-collapse" id="imported-reports-collapse">
+     <summary id="imported-reports-summary">Імпортовані CSV/JSON звіти <span>⌄</span></summary>
+   <div class="panel analytics-panel"><div class="panel-title"><h2 data-t="statistics">Звіти</h2><div class="row-buttons"><button class="secondary-button" id="report-template" type="button" data-t="sampleCsv">Шаблон CSV</button><label class="secondary-button file-button" for="report-import"><svg><use href="#i-upload"/></svg><span data-t="importReport">Імпорт звіту</span><input id="report-import" type="file" accept=".csv,.json,text/csv,application/json" hidden></label></div></div>
+    <div class="analytics-filters"><label><span data-t="platform">Платформа</span><select id="analytics-provider"><option value="youtube">YouTube</option><option value="tiktok">TikTok</option><option value="twitch">Twitch</option><option value="x">X</option></select></label><label><span data-t="metric">Показник</span><select id="analytics-metric"><option value="views" data-t="views">Перегляди</option><option value="followers" data-t="followers">Підписники</option><option value="likes" data-t="likes">Вподобання</option><option value="comments" data-t="comments">Коментарі</option><option value="shares" data-t="shares">Поширення</option></select></label></div>
+    <div class="analytics-chart" id="analytics-chart"></div>
+    <div class="analytics-bottom"><small data-t="reportNote">Статистика лише з імпортованих звітів. Автоматичне підключення соцмереж ще недоступне.</small><button id="analytics-clear" type="button" class="text-button" data-t="clearReports">Видалити звіти</button></div>
+   </div>
+   </details>
   </section>
  </main>
 </div>
