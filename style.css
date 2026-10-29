@@ -617,3 +617,14 @@ dialog{background:var(--card);border:1px solid var(--border);color:var(--text);b
 .account-link-details>small{color:var(--hint);font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media(max-width:790px){.youtube-channel-options{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:530px){.youtube-channel-options{grid-template-columns:1fr}.youtube-accounts-switcher{padding:12px}.youtube-switcher-heading>div{flex-direction:column;align-items:flex-start;gap:3px}.youtube-switcher-heading button{font-size:10px;padding:7px 9px}}
+
+/* Public app disclosure and legal links for Google OAuth Branding. */
+.legal-nav{display:flex;align-items:center;flex-wrap:wrap;gap:7px;padding:7px 13px 1px;font-size:10px;color:var(--hint)}
+.legal-nav a{font-size:10px;color:var(--sub);text-decoration:none}
+.legal-nav a:hover{text-decoration:underline;color:var(--text)}
+.viver-public-about{margin:20px 0 0;padding:15px 17px;border:1px solid var(--border);border-radius:10px;background:var(--card);color:var(--sub);max-width:950px}
+.viver-public-about>strong{display:block;font-size:12px;font-weight:650;color:var(--text)}
+.viver-public-about>p{font-size:11px;line-height:1.65;color:var(--sub);margin:7px 0 9px}
+.viver-public-about>a{font-size:10px;color:var(--accent);margin-right:18px;display:inline-block;margin-bottom:5px;text-decoration:none}
+.viver-public-about>a:hover{text-decoration:underline}
+@media(max-width:550px){.viver-public-about{padding:12px 13px}.legal-nav{padding-left:9px}}
