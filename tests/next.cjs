@@ -11,6 +11,16 @@ const read=f=>fs.readFileSync(path.join(__dirname,'..',f),'utf8');
  const w=dom.window,$=q=>w.document.querySelector(q);
  w.scrollTo=()=>{};w.HTMLElement.prototype.scrollIntoView=()=>{};w.confirm=()=>true;
  vm.runInContext(read('app.js'),dom.getInternalVMContext(),{filename:'app.js'});
+ // Guests can access platform analytics and reminders but no workspace-only page.
+ for(const target of ['planner','calendar','board','teams']){
+  assert.equal(w.VIVERCore.nav(target),false,'guest blocked from '+target);
+  assert.equal(w.VIVERCore.page,'settings','ID sign-in shown for '+target);
+  assert.equal($('#page-'+target)?.classList.contains('active')||false,false,'private page hidden '+target);
+ }
+ for(const openPage of ['home','platforms','reminders','settings']){
+  assert.equal(w.VIVERCore.nav(openPage),true,'guest allowed '+openPage);
+  assert.equal(w.VIVERCore.page,openPage);
+ }
  w.VIVERConnections={getActiveYoutubeChannel:()=>'',getConnections:()=>[],getStatus:()=> 'ready',request:async()=>{throw Error('not connected')}};
  let cloudWrite=null;const username='viver_tester',user={id:'TEST_ACCOUNT_ID',username};
  const ok=(data,status=200)=>({ok:status<400,status,json:async()=>data});
@@ -18,6 +28,7 @@ const read=f=>fs.readFileSync(path.join(__dirname,'..',f),'utf8');
   const u=new URL(url),method=opt.method||'GET';
   if(u.pathname==='/v1/auth/register'&&method==='POST')return ok({user,token:'T'.repeat(43),recovery:'R'.repeat(43)},201);
   if(u.pathname==='/v1/auth/me')return ok({user});
+  if(u.pathname==='/v1/auth/logout'&&method==='POST')return ok({ok:true});
   if(u.pathname==='/v1/teams'&&method==='GET')return ok({teams:[]});
   if(u.pathname==='/v1/workspace'&&method==='GET')return ok({exists:false,version:0});
   if(u.pathname==='/v1/workspace'&&method==='PUT'){cloudWrite=JSON.parse(opt.body);return ok({ok:true,version:1,updatedAt:Date.now()})}
@@ -42,6 +53,10 @@ const read=f=>fs.readFileSync(path.join(__dirname,'..',f),'utf8');
  assert.equal(w.VIVERId.getUser()?.username,username,'registration stored session in UI');
  assert($('#vs-recovery-value')?.textContent==='R'.repeat(43),'key displayed only after registration');
  assert.equal(w.localStorage.getItem('viver-id-session-v1'),'T'.repeat(43),'session persists');
+ for(const target of ['planner','calendar','board','teams']){
+  assert.equal(w.VIVERCore.nav(target),true,'verified ID allowed '+target);
+  assert.equal(w.VIVERCore.page,target);
+ }
  const p={id:'p1',title:'Test production',date:'2026-12-02T18:00',platform:'youtube',status:'idea',notes:'',checks:[],created:Date.now()};
  w.VIVERCore.state.plans.push(p);
  w.dispatchEvent(new w.Event('viver-studio-updated'));
@@ -64,6 +79,20 @@ const read=f=>fs.readFileSync(path.join(__dirname,'..',f),'utf8');
  w.VIVERCore.nav('teams');
  assert($('#page-teams').classList.contains('active'),'Teams accessible by app navigation');
  assert($('#vs-create-team'),'logged-in account can create a team');
+ $('#viver-id-card [data-vs-action="logout"]').click();
+ await new Promise(r=>setTimeout(r,15));
+ assert.equal(w.VIVERId.getUser(),null,'logout clears verified identity');
+ assert.equal(w.VIVERCore.page,'settings','logout from Teams goes to public settings');
+ assert.equal(w.VIVERCore.nav('planner'),false,'logout closes Planner access');
+ assert.equal(w.VIVERCore.nav('calendar'),false,'logout closes Calendar access');
+ assert.equal(w.VIVERCore.nav('board'),false,'logout closes Idea Board access');
+ assert.equal(w.VIVERCore.nav('teams'),false,'logout closes Teams access');
+ assert.equal($('#stat-plans').textContent,'—','guest sees no local plan count');
+ assert.equal($('#stat-notes').textContent,'—','guest sees no local note count');
+ assert(!$('#home-plans').textContent.includes('Test production'),'guest home hides local private plan name');
+ assert.equal(w.VIVERCore.state.plans[0].title,'Test production','logging out never deletes local workspace data');
+ assert.equal(w.VIVERCore.nav('platforms'),true,'guest still opens social connections');
+ assert.equal(w.VIVERCore.nav('reminders'),true,'guest still opens reminders');
  assert.equal(errors.length,0,'no unexpected browser errors: '+errors.join(', '));
  dom.window.close();
  console.log('VIVER Next browser tests: PASS — ID, recovery display, cloud backup, studio, alerts, Teams, navigation');
