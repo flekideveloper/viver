@@ -2,10 +2,10 @@
 /* VIVER platform-specific studio. Provider tabs exist ONLY for actively connected accounts.
    TikTok/Twitch/X use official authenticated read-only APIs; historical stats start with real snapshots. */
 (()=>{
- const hub=document.querySelector('#connected-platform-hub');
- const outer=document.querySelector('#connected-platform-tabs');
+ const sidebar=document.querySelector('#sidebar-social');
+ const outer=document.querySelector('#social-sidebar-nav');
  const social=document.querySelector('#social-studio-panel');
- if(!hub||!outer||!social||!window.VIVERConnections)return;
+ if(!sidebar||!outer||!social||!window.VIVERConnections)return;
  const auth=window.VIVERConnections,core=window.VIVERCore;
  const $=q=>document.querySelector(q);
  const escape=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -228,34 +228,52 @@
   if(!connections().some(c=>c.provider===provider))return;
   if(provider!==selected){serial++;data=null;error='';knownKey='';lastUpdate=0;loading=false;inner='overview';detailId='';compareA='';compareB=''}
   selected=provider;
-  renderHub();
+  if(core?.page!==provider)core?.nav?.(provider);
+  renderSidebar();
   if(provider!=='youtube')fetchSelected();
  }
- function renderHub(){
+ function renderSidebar(){
   const list=connections();
-  hub.hidden=list.length===0;
-  $('#connected-platform-heading').textContent=text('Твої підключені платформи','Your connected platforms');
-  $('#connected-platform-count').textContent=list.length+' / 4';
-  if(!list.length){
-   outer.innerHTML='';
-   social.hidden=true;
-   for(const el of document.querySelectorAll('[data-platform-section="youtube"]'))el.hidden=true;
-   return;
-  }
-  if(!list.some(x=>x.provider===selected))selected=list[0].provider;
-  outer.innerHTML=list.map(x=>'<button type="button" class="connected-platform-tab '+(x.provider===selected?'active':'')+'" role="tab" data-platform-select="'+x.provider+'" aria-selected="'+(selected===x.provider)+'"><span class="connected-platform-symbol connected-platform-'+x.provider+'">'+symbol[x.provider]+'</span><span>'+name[x.provider]+'</span></button>').join('');
-  const yt=selected==='youtube';
-  // YouTube modules own their own data; their panels are only visible inside the YouTube tab.
-  for(const el of document.querySelectorAll('[data-platform-section="youtube"]'))el.hidden=!yt;
-  social.hidden=yt;
-  if(!yt)renderSocial();
+  sidebar.hidden=!list.length;
+  $('#sidebar-social-heading').textContent=text('СОЦМЕРЕЖІ','SOCIAL NETWORKS');
+  if(!list.length){outer.replaceChildren();social.hidden=true;return}
+  outer.innerHTML=initial.filter(id=>list.some(x=>x.provider===id)).map(id=>{
+   const isActive=core?.page===id;
+   return '<button class="nav-item social-nav-button '+(isActive?'active':'')+'" type="button" data-page="'+id+'" aria-current="'+(isActive?'page':'false')+'"><span class="sidebar-social-mark connected-platform-'+id+'">'+symbol[id]+'</span><span>'+name[id]+'</span></button>';
+  }).join('');
  }
  function sync(){
-  const list=connections();
-  if(!list.some(x=>x.provider===selected)){serial++;data=null;error='';knownKey='';loading=false;lastUpdate=0;selected=list[0]?.provider||'youtube'}
-  if(active()&&selected!=='youtube'&&knownKey&&knownKey!==selected+':'+active().label){serial++;data=null;error='';knownKey='';loading=false;lastUpdate=0}
-  renderHub();
-  if(selected!=='youtube'&&list.length&&core?.page==='platforms')fetchSelected();
+  const list=connections(),page=core?.page;
+  // Restore a bookmarked provider URL after OAuth is verified on page reload.
+  const fragment=location.hash.slice(1);
+  if(initial.includes(fragment)&&list.some(x=>x.provider===fragment)&&page!==fragment)core?.nav?.(fragment,false);
+  const current=core?.page;
+  if(initial.includes(current)&&!list.some(x=>x.provider===current)){
+   serial++;data=null;knownKey='';error='';loading=false;lastUpdate=0;
+   core?.nav?.('platforms');
+  }
+  const now=core?.page;
+  if(initial.includes(now)&&list.some(x=>x.provider===now)){
+   if(selected!==now){serial++;data=null;error='';knownKey='';lastUpdate=0;loading=false;inner='overview';compareA='';compareB=''}
+   selected=now;
+  }
+  if(!list.some(x=>x.provider===selected)){
+   serial++;data=null;error='';knownKey='';loading=false;lastUpdate=0;selected=list[0]?.provider||'youtube';
+  }
+  if(active()&&selected!=='youtube'&&knownKey&&knownKey!==selected+':'+active().label){
+   serial++;data=null;error='';knownKey='';loading=false;lastUpdate=0;
+  }
+  renderSidebar();
+  const displayed=core?.page===selected&&list.some(x=>x.provider===selected);
+  if(displayed&&selected!=='youtube'){
+   const target=document.getElementById('social-mount-'+selected);
+   if(target&&social.parentNode!==target)target.appendChild(social);
+   social.hidden=false;
+   renderSocial();
+   fetchSelected();
+  }else{
+   social.hidden=true;
+  }
  }
  function planOpen(id){
   if(!core)return;
@@ -268,7 +286,7 @@
   s.links[id]=p.id;p.status='published';
   core.save();core.renderHome();core.renderPlans();store();renderSocial();
  }
- outer.addEventListener('click',ev=>{const btn=ev.target.closest('[data-platform-select]');if(btn)select(btn.dataset.platformSelect)});
+ outer.addEventListener('click',()=>setTimeout(sync,0));
  social.addEventListener('click',ev=>{
   const btn=ev.target.closest('[data-social-inner]');if(btn){inner=btn.dataset.socialInner;renderSocial();return}
   if(ev.target.closest('[data-social-reauthorize]')){auth.start(selected);return}
@@ -305,8 +323,8 @@
  $('#social-studio-reload').addEventListener('click',()=>fetchSelected(true));
  window.addEventListener('viver-connections-updated',()=>setTimeout(sync,0));
  window.addEventListener('hashchange',()=>setTimeout(sync,0));
- document.addEventListener('click',ev=>{if(ev.target.closest('[data-page="platforms"],[data-goto="platforms"]'))setTimeout(sync,0)});
- $('#language')?.addEventListener('change',()=>setTimeout(()=>{renderHub()},0));
+ document.addEventListener('click',ev=>{if(ev.target.closest('[data-page],[data-goto]'))setTimeout(sync,0)});
+ $('#language')?.addEventListener('change',()=>setTimeout(sync,0));
  window.VIVERPlatformHub={select,sync,getSelected:()=>selected};
  sync();
 })();
