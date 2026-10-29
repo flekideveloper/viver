@@ -213,7 +213,7 @@
   alert.innerHTML='<button type="button" data-studio-jump="alerts" class="creator-home-tool"><span>♧ '+t('Сповіщення','Alerts')+'</span><strong>'+count+' '+t('нових','unread')+'</strong></button>';
  }
  function render(){
-  root.hidden=!linked()||(!!window.VIVERPlatformHub&&window.VIVERPlatformHub.getSelected()!=='youtube');
+  root.hidden=!linked();
   if(!linked()){home.hidden=true;return}
   $('#studio-heading').textContent=t('Мій YouTube · Creator Studio','My YouTube · Creator Studio');
   $('#studio-caption').textContent=t('Відео, планер, цілі, події та порівняння','Videos, planner, goals, alerts and comparisons');
@@ -232,7 +232,7 @@
   body.innerHTML=!channel&&tab!=='videos'?'<div class="studio-empty">'+t('Завантажуємо дані твого YouTube-каналу…','Loading your YouTube channel…')+'</div>':views[tab]();
   renderHome();
  }
- function jump(next){tab=next;core.nav('platforms');render();load()}
+ function jump(next){tab=next;core.nav('youtube');render();load()}
  function openPlan(planId){
   core.nav('planner');$('#plan-filter').value='all';core.renderPlans();
   const target=[...document.querySelectorAll('[data-plan-edit]')].find(x=>x.dataset.planEdit===planId);target?.click();
@@ -306,7 +306,7 @@
  });
  home.addEventListener('click',ev=>{const btn=ev.target.closest('[data-studio-jump]');if(btn)jump(btn.dataset.studioJump)});
  $('#studio-reload').addEventListener('click',()=>load(true));
- document.addEventListener('click',ev=>{if(ev.target.closest('[data-page="platforms"],[data-goto="platforms"]'))setTimeout(update,0)});
+ document.addEventListener('click',ev=>{if(ev.target.closest('[data-page="youtube"],[data-goto="youtube"]'))setTimeout(update,0)});
  window.addEventListener('hashchange',()=>setTimeout(update,0));
  $('#language')?.addEventListener('change',()=>setTimeout(render,0));
  function update(){
@@ -319,7 +319,7 @@
    seq++;catalog=null;channelStats=null;channel='';connectedLabel='';error='';loading=false;selection='';comparison=null;retention=null;lastFetch=0;render();return;
   }
   render();
-  if(core.page==='home'||core.page==='platforms')load();
+  if(core.page==='youtube')load();
  }
  window.addEventListener('viver-connections-updated',update);
  window.VIVERStudio={update,load,getCatalog:()=>catalog,openTab:jump};
