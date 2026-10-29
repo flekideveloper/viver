@@ -265,7 +265,12 @@
   }
   renderSidebar();
   const displayed=core?.page===selected&&list.some(x=>x.provider===selected);
-  if(displayed&&selected!=='youtube'){
+  if(displayed&&selected==='youtube'){
+   social.hidden=true;
+   window.VIVERYoutube?.update?.();
+   window.VIVERStudio?.update?.();
+   window.VIVEROverviewAnalytics?.sync?.();
+  }else if(displayed&&selected!=='youtube'){
    const target=document.getElementById('social-mount-'+selected);
    if(target&&social.parentNode!==target)target.appendChild(social);
    social.hidden=false;
