@@ -5,13 +5,15 @@ const fs=require('node:fs');
 const vm=require('node:vm');
 const {webcrypto}=require('node:crypto');
 const source=fs.readFileSync(require('node:path').join(__dirname,'../auth-worker/src/index.js'),'utf8');
-const pending=new Map(),accounts=new Map(),youtubeCache=new Map(),snapshots=new Map(),analyticsCache=new Map(),videoCache=new Map(),socialCache=new Map(),socialHistory=new Map();
+const youtubeVault=new Map(),pending=new Map(),accounts=new Map(),youtubeCache=new Map(),snapshots=new Map(),analyticsCache=new Map(),videoCache=new Map(),socialCache=new Map(),socialHistory=new Map();
 const DB={
  prepare(sql){const entry={sql,values:[],bind(...args){this.values=args;return this},
   async first(){
    const [a,b]=this.values;
-   if(sql.includes('COUNT(*)'))return {total:[...pending.values()].filter(v=>v.client_hash===a).length};
+   if(sql.includes('COUNT(*)'))return {total:sql.includes('oauth_youtube_channels')?[...youtubeVault.values()].filter(v=>v.client_hash===a).length:[...pending.values()].filter(v=>v.client_hash===a).length};
    if(sql.includes('FROM oauth_pending'))return pending.get(a)&&pending.get(a).provider===b?pending.get(a):null;
+   if(sql.includes('FROM oauth_youtube_channels'))return b?youtubeVault.get(a+'|'+b)||null:[...youtubeVault.values()].filter(v=>v.client_hash===a).sort((x,y)=>y.updated_at-x.updated_at)[0]||null;
+   if(sql.includes('SELECT subject FROM oauth_accounts'))return accounts.get(a+'|youtube')||null;
    if(sql.includes('FROM social_overview_cache'))return socialCache.get(a+'|'+b)||null;
    if(sql.includes('FROM youtube_video_cache'))return videoCache.get(a)||null;
    if(sql.includes('FROM youtube_analytics_cache'))return analyticsCache.get(a)||null;
@@ -19,7 +21,7 @@ const DB={
    if(sql.includes('FROM oauth_accounts'))return accounts.get(a+'|'+b)||null;
    return null
   },
-  async all(){const [h,id,subject]=this.values;if(sql.includes('social_metric_snapshots'))return {results:[...socialHistory.values()].filter(x=>x.client_hash===h&&x.provider===id&&x.subject===subject).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,45)};
+  async all(){const [h,id,subject]=this.values;if(sql.includes('FROM oauth_youtube_channels'))return {results:[...youtubeVault.values()].filter(v=>v.client_hash===h).sort((a,b)=>b.updated_at-a.updated_at)};if(sql.includes('social_metric_snapshots'))return {results:[...socialHistory.values()].filter(x=>x.client_hash===h&&x.provider===id&&x.subject===subject).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,45)};
    if(sql.includes('youtube_snapshots'))return {results:[...snapshots.values()].filter(x=>x.client_hash===h&&x.channel_id===id).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,60)};
    return {results:[...accounts.values()].filter(v=>v.client_hash===h)}},
   async run(){
@@ -27,7 +29,14 @@ const DB={
    if(sql.includes('DELETE FROM oauth_pending WHERE created_at')){for(const [k,p] of pending){if(p.created_at<v[0])pending.delete(k)}}
    if(sql.includes('INSERT INTO oauth_pending'))pending.set(v[0],{state:v[0],client_hash:v[1],provider:v[2],verifier:v[3],created_at:v[4]});
    if(sql.includes('DELETE FROM oauth_pending WHERE state'))pending.delete(v[0]);
-   if(sql.includes('INSERT INTO oauth_accounts'))accounts.set(v[0]+'|'+v[1],{client_hash:v[0],provider:v[1],subject:v[2],label:v[3],avatar:v[4],token_enc:v[5],refresh_enc:v[6],expires_at:v[7],updated_at:v[8]});
+   if(sql.includes('INSERT OR IGNORE INTO oauth_youtube_channels')){
+    const x=accounts.get(v[0]+'|youtube');if(x&&!youtubeVault.has(v[0]+'|'+x.subject))youtubeVault.set(v[0]+'|'+x.subject,{client_hash:v[0],channel_id:x.subject,label:x.label,avatar:x.avatar,token_enc:x.token_enc,refresh_enc:x.refresh_enc,expires_at:x.expires_at,updated_at:x.updated_at});
+   }
+   if(sql.includes('INSERT INTO oauth_youtube_channels'))youtubeVault.set(v[0]+'|'+v[1],{client_hash:v[0],channel_id:v[1],label:v[2],avatar:v[3],token_enc:v[4],refresh_enc:v[5],expires_at:v[6],updated_at:v[7]});
+   if(sql.includes('UPDATE oauth_youtube_channels SET')){const x=youtubeVault.get(v[4]+'|'+v[5]);if(x)Object.assign(x,{token_enc:v[0],refresh_enc:v[1],expires_at:v[2],updated_at:v[3]})}
+   if(sql.includes('INSERT INTO oauth_accounts')){const v2=sql.includes("'youtube'")?[v[0],'youtube',...v.slice(1)]:v;accounts.set(v2[0]+'|'+v2[1],{client_hash:v2[0],provider:v2[1],subject:v2[2],label:v2[3],avatar:v2[4],token_enc:v2[5],refresh_enc:v2[6],expires_at:v2[7],updated_at:v2[8]})}
+   if(sql.includes('UPDATE oauth_accounts SET subject=')){const x=accounts.get(v[7]+'|youtube');if(x)Object.assign(x,{subject:v[0],label:v[1],avatar:v[2],token_enc:v[3],refresh_enc:v[4],expires_at:v[5],updated_at:v[6]})}
+   if(sql.includes('UPDATE oauth_accounts SET token_enc=')){const x=accounts.get(v[4]+'|'+v[5]);if(x)Object.assign(x,{token_enc:v[0],refresh_enc:v[1],expires_at:v[2],updated_at:v[3]})}
    if(sql.includes('INSERT INTO social_overview_cache'))socialCache.set(v[0]+'|'+v[1],{client_hash:v[0],provider:v[1],subject:v[2],payload:v[3],updated_at:v[4]});
    if(sql.includes('INSERT INTO social_metric_snapshots'))socialHistory.set(v[0]+'|'+v[1]+'|'+v[2]+'|'+v[3],{client_hash:v[0],provider:v[1],subject:v[2],date:v[3],metrics:v[4],updated_at:v[5]});
    if(sql.includes('INSERT INTO youtube_video_cache'))videoCache.set(v[0],{client_hash:v[0],channel_id:v[1],payload:v[2],updated_at:v[3]});
@@ -39,7 +48,8 @@ const DB={
    if(sql.includes('DELETE FROM youtube_video_cache'))videoCache.delete(v[0]);
    if(sql.includes('DELETE FROM youtube_analytics_cache'))analyticsCache.delete(v[0]);
    if(sql.includes('DELETE FROM youtube_cache'))youtubeCache.delete(v[0]);
-   if(sql.includes('DELETE FROM youtube_snapshots')){for(const [k,row] of snapshots){if(row.client_hash===v[0])snapshots.delete(k)}}
+   if(sql.includes('DELETE FROM youtube_snapshots')){for(const [k,row] of snapshots){if(row.client_hash===v[0]&&(v.length<2||row.channel_id===v[1]))snapshots.delete(k)}}
+   if(sql.includes('DELETE FROM oauth_youtube_channels')){for(const [k,row] of youtubeVault){if(row.client_hash===v[0]&&(v.length<2||row.channel_id===v[1]))youtubeVault.delete(k)}}
    if(sql.includes('DELETE FROM oauth_accounts'))accounts.delete(v[0]+'|'+v[1]);
    return {success:true}
   }};return entry}
@@ -93,8 +103,17 @@ const mockFetch=async(url,opts)=>{
   return Response.json({data:{id:'x-456',name:'X Creator',username:'xcreator',profile_image_url:'https://example.com/x.jpg',public_metrics:{followers_count:83,following_count:13,tweet_count:21}}});
  if(String(url).includes('api.x.com/2/users/x-456/tweets'))
   return Response.json({data:[{id:'2233',author_id:'x-456',text:'My own post',created_at:'2026-10-27T12:00:00Z',public_metrics:{like_count:10,retweet_count:2,reply_count:1,impression_count:800}}]});
- if(String(url).includes('oauth2.googleapis.com/token'))return Response.json({access_token:'secret-access-token',refresh_token:'secret-refresh-token',expires_in:3600});
- if(String(url).includes('youtube/v3/channels'))return Response.json({items:[{id:'test-channel',snippet:{title:'Creator Test',description:'Test channel',thumbnails:{default:{url:'https://example.com/avatar.jpg'}}},statistics:{viewCount:'15200',subscriberCount:'789',videoCount:'12',hiddenSubscriberCount:false},contentDetails:{relatedPlaylists:{uploads:'UUTESTUPLOADS'}}}]});
+ if(String(url).includes('oauth2.googleapis.com/token')){
+  const code=String(opts?.body||'');
+  const channel=code.includes('code=channel4')?'4':code.includes('code=channel3')?'3':code.includes('code=channel2')?'2':'1';
+  return Response.json({access_token:'secret-access-token-'+channel,refresh_token:'secret-refresh-token-'+channel,expires_in:3600});
+ }
+ if(String(url).includes('youtube/v3/channels')){
+  const token=opts?.headers?.Authorization||'';
+  const n=token.endsWith('-2')?2:token.endsWith('-3')?3:token.endsWith('-4')?4:1;
+  const id=['',"UCAAAAAAAAAAAAAAAAAAAAAA","UCBBBBBBBBBBBBBBBBBBBBBB","UCCCCCCCCCCCCCCCCCCCCCCC","UCDDDDDDDDDDDDDDDDDDDDDD"][n];
+  return Response.json({items:[{id,snippet:{title:n===1?'Creator Test':'Channel '+n,description:'Test channel',thumbnails:{default:{url:'https://example.com/avatar.jpg'}}},statistics:{viewCount:String(n===1?15200:n*1000),subscriberCount:'789',videoCount:'12',hiddenSubscriberCount:false},contentDetails:{relatedPlaylists:{uploads:'UUTESTUPLOADS'}}}]});
+ }
  if(String(url).includes('youtube/v3/playlistItems')){
   const cursor=new URL(url).searchParams.get('pageToken');
   return cursor==='NEXT_PAGE'?Response.json({items:[{contentDetails:{videoId:'LmNoPqRsTuV'}}]}):Response.json({items:[{contentDetails:{videoId:'AbCdEfGhIjK'}}],nextPageToken:'NEXT_PAGE'});
@@ -102,7 +121,7 @@ const mockFetch=async(url,opts)=>{
  if(String(url).includes('youtube/v3/videos')){
   const ids=(new URL(url).searchParams.get('id')||'').split(',');
   const known=[
-   {id:'AbCdEfGhIjK',snippet:{channelId:'test-channel',title:'Latest clip',publishedAt:'2026-10-20T12:00:00Z',thumbnails:{default:{url:'https://example.com/thumb.jpg'}}},status:{privacyStatus:'public'},contentDetails:{duration:'PT3M40S'},statistics:{viewCount:'420',likeCount:'30',commentCount:'7'}},
+   {id:'AbCdEfGhIjK',snippet:{channelId:"UCAAAAAAAAAAAAAAAAAAAAAA",title:'Latest clip',publishedAt:'2026-10-20T12:00:00Z',thumbnails:{default:{url:'https://example.com/thumb.jpg'}}},status:{privacyStatus:'public'},contentDetails:{duration:'PT3M40S'},statistics:{viewCount:'420',likeCount:'30',commentCount:'7'}},
    {id:'LmNoPqRsTuV',snippet:{channelId:'test-channel',title:'Older clip',publishedAt:'2026-10-15T12:00:00Z'},status:{privacyStatus:'public'},contentDetails:{duration:'PT2M'},statistics:{viewCount:'300',likeCount:'15',commentCount:'4'}}
   ];
   return Response.json({items:known.filter(x=>ids.includes(x.id))});
@@ -214,7 +233,44 @@ const req=(path,method='GET',origin='https://flekideveloper.github.io',token=key
  assert.equal(validCompare.videos[0].report.views,440,'first 7-day report reflects Google metrics');
  assert.equal(validCompare.videos[1].report.views,440,'second 7-day report reflects Google metrics');
  assert.equal(validCompare.comparable,true,'two mature reports are marked comparable');
+ // Three independent channel identities in one local VIVER installation.
+ assert.equal(youtubeVault.size,1,'first channel migrated to the encrypted vault');
+ const initialChannels=await (await worker.fetch(req('/connections'),env)).json();
+ assert.equal(initialChannels.youtubeChannels.length,1);
+ assert.equal(initialChannels.activeYoutubeChannel,"UCAAAAAAAAAAAAAAAAAAAAAA");
+ for(const n of [2,3]){
+  const auth=await (await worker.fetch(req('/auth/start/youtube','POST'),env)).json();
+  const st=new URL(auth.url).searchParams.get('state');
+  const cb=await worker.fetch(req('/auth/callback/youtube?code=channel'+n+'&state='+st),env);
+  assert.equal(cb.status,200,'additional YouTube channel #'+n+' added with consent');
+ }
+ assert.equal(youtubeVault.size,3,'max three distinct channels stored');
+ const all=await (await worker.fetch(req('/connections'),env)).json();
+ assert.equal(all.youtubeChannels.length,3,'all three channels shown to browser without tokens');
+ assert.equal(all.activeYoutubeChannel,"UCCCCCCCCCCCCCCCCCCCCCCC",'latest connected channel becomes active');
+ assert(!JSON.stringify(all).includes('secret-access-token'),'secret tokens never appear in channel picker');
+ assert.equal((await worker.fetch(req('/youtube/channels/select','POST','https://bad.example'),env)).status,403,'channel selection checks origin');
+ const swapRequest=(id,token=key)=>new Request(base+'/youtube/channels/select',{method:'POST',headers:{Origin:'https://flekideveloper.github.io',Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({channelId:id})});
+ assert.equal((await worker.fetch(swapRequest("UCBBBBBBBBBBBBBBBBBBBBBB",'wrong'),env)).status,401,'channel selection rejects unknown capability');
+ assert.equal((await worker.fetch(swapRequest("UCAAAAAAAAAAAAAAAAAAAAAA"),env)).status,200,'switching to initial channel works');
+ const afterSwitch=await (await worker.fetch(req('/connections'),env)).json();
+ assert.equal(afterSwitch.activeYoutubeChannel,"UCAAAAAAAAAAAAAAAAAAAAAA",'active account switches without losing other channels');
+ assert.equal(youtubeVault.size,3,'switch preserves all authorized channels');
+ assert(snapshots.size>=1,'historical measurements survive channel switching');
+ const fourthAuth=await (await worker.fetch(req('/auth/start/youtube','POST'),env)).json();
+ const fourthState=new URL(fourthAuth.url).searchParams.get('state');
+ const denied=await worker.fetch(req('/auth/callback/youtube?code=channel4&state='+fourthState),env);
+ assert.equal(denied.status,400,'fourth distinct YouTube channel rejected');
+ assert.equal(youtubeVault.size,3,'limit cannot replace existing channels');
+ assert.equal((await worker.fetch(req('/youtube/channels/'+"UCBBBBBBBBBBBBBBBBBBBBBB",'DELETE'),env)).status,200,'can unlink a single channel');
+ assert.equal(youtubeVault.size,2,'removal leaves the other two accounts intact');
+ const updated=await (await worker.fetch(req('/connections'),env)).json();
+ assert.equal(updated.youtubeChannels.length,2);
+ assert.equal(updated.activeYoutubeChannel,"UCAAAAAAAAAAAAAAAAAAAAAA");
+ assert.equal((await worker.fetch(req('/youtube/channels/'+"UCAAAAAAAAAAAAAAAAAAAAAA",'DELETE'),env)).status,200,'can unlink active channel');
+ assert.equal((await (await worker.fetch(req('/connections'),env)).json()).activeYoutubeChannel,"UCCCCCCCCCCCCCCCCCCCCCCC",'another channel automatically becomes active');
  assert.equal((await worker.fetch(req('/connections/youtube','DELETE'),env)).status,200);
+ assert.equal(youtubeVault.size,0,'disconnect all clears every authorized YouTube channel');
  assert.equal(videoCache.size,0,'video library cache erased on disconnect');
  assert.equal(analyticsCache.size,0,'analytics cache purged on disconnect');
  assert.equal(youtubeCache.size,0,'disconnect erases channel cache');
