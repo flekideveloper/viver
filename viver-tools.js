@@ -9,7 +9,7 @@
  const read=(key,fallback)=>{try{const o=JSON.parse(localStorage.getItem(key)||'null');return o&&typeof o==='object'?o:fallback}catch{return fallback}};
  const write=(key,data)=>{try{localStorage.setItem(key,JSON.stringify(data))}catch{core.toast(t('Не вдалося зберегти','Save failed'))}};
  const tools=read(STUDIO,{}),alerts=read(ALERTS,{items:[],quiet:false,start:22,end:8,notifications:false}),insights=read(INSIGHTS,{channels:{}});
- let selection='',insightsBusy=false,insightsReport=null,insightsError='',lastInsights=0;
+ let selection='',insightsBusy=false,insightsReport=null,insightsError='',lastInsights=0,insightsDays=7;
  const make=(parent,selector,title)=>{
   const box=document.createElement('details');box.className='vs-card vs-expander';box.id=selector;
   const s=document.createElement('summary');s.textContent=title;box.append(s);
@@ -121,7 +121,7 @@
   if(!id||!auth){insightsReport=null;renderInsights();return}
   insightsBusy=true;insightsError='';renderInsights();
   try{
-   const [stats,analytics]=await Promise.allSettled([auth.request('/youtube/stats'),auth.request('/youtube/analytics')]);
+   const [stats,analytics]=await Promise.allSettled([auth.request('/youtube/stats'),auth.request('/youtube/analytics?days='+insightsDays)]);
    if(stats.status==='fulfilled'&&stats.value.channel?.id===id){
     const s=stats.value;
     insights.channels[id]={id,title:s.channel.title,totals:s.totals,history:s.history||[],observedAt:Date.now()};
@@ -141,17 +141,18 @@
  }
  function renderInsights(){
   const id=channelId(),record=insights.channels[id],values=Object.values(insights.channels||{}).sort((a,b)=>(b.observedAt||0)-(a.observedAt||0));
-  advanced.innerHTML='<div class="vs-actions"><button type="button" class="primary-button" id="vs-insights-refresh" '+(insightsBusy?'disabled':'')+'>'+t('Оновити через YouTube API','Refresh from YouTube API')+'</button></div>'+
+  advanced.innerHTML='<div class="vs-actions"><label>'+t('Період','Period')+' <select id="vs-insights-days"><option value="7" '+(insightsDays===7?'selected':'')+'>7 '+t('днів','days')+'</option><option value="30" '+(insightsDays===30?'selected':'')+'>30 '+t('днів','days')+'</option><option value="90" '+(insightsDays===90?'selected':'')+'>90 '+t('днів','days')+'</option></select></label><button type="button" class="primary-button" id="vs-insights-refresh" '+(insightsBusy?'disabled':'')+'>'+t('Оновити через YouTube API','Refresh from YouTube API')+'</button></div>'+
    (id?'<p class="vs-hint">'+t('Дані лише підключеного каналу. Історія записується в день фактичного перегляду статистики, не відновлюється заднім числом.','Data from your authorized channel only. Snapshots are recorded when checked, not fabricated for missing days.')+'</p>':'<p class="vs-muted">'+t('Спочатку підключи YouTube-канал','Connect a YouTube channel first')+'</p>')+
    (insightsError?'<p class="vs-error">'+esc(insightsError)+'</p>':'')+
    (record?'<div class="vs-analytics-stats"><div><span>'+t('Усі перегляди','Lifetime views')+'</span><strong>'+number(record.totals?.views)+'</strong></div><div><span>'+t('Підписники','Subscribers')+'</span><strong>'+number(record.totals?.subscribers)+'</strong></div><div><span>'+t('Відео','Videos')+'</span><strong>'+number(record.totals?.videos)+'</strong></div></div>'+
    '<h3>'+t('Історія зафіксованих загальних переглядів','Observed lifetime-view history')+'</h3>'+spark(record.history||[]):'')+
-   (insightsReport?.period?'<h3>'+t('Результати останніх 7 доступних днів','Last 7 available days')+'</h3><div class="vs-analytics-stats"><div><span>'+t('Перегляди','Views')+'</span><strong>'+number(insightsReport.current?.views)+'</strong></div><div><span>'+t('Чистий приріст підписників','Net subscribers')+'</span><strong>'+number(insightsReport.current?.netSubscribers)+'</strong></div><div><span>'+t('Час перегляду (год)','Watch hours')+'</span><strong>'+number(Math.round((insightsReport.current?.estimatedMinutesWatched||0)/60))+'</strong></div></div>':'')+
+   (insightsReport?.period?'<h3>'+t('YouTube Analytics за ','YouTube Analytics for ')+esc(insightsReport.period.windowDays||7)+' '+t('днів','days')+'</h3><div class="vs-analytics-stats"><div><span>'+t('Перегляди','Views')+'</span><strong>'+number(insightsReport.current?.views)+'</strong></div><div><span>'+t('Чистий приріст підписників','Net subscribers')+'</span><strong>'+number(insightsReport.current?.netSubscribers)+'</strong></div><div><span>'+t('Час перегляду (год)','Watch hours')+'</span><strong>'+number(Math.round((insightsReport.current?.estimatedMinutesWatched||0)/60))+'</strong></div></div>':'')+
    '<h3>'+t('Підключені канали: останні збережені вимірювання','Channels: last saved observations')+'</h3>'+
    '<div class="vs-observations">'+(values.length?values.map(x=>'<div><strong>'+esc(x.title)+'</strong><span>'+number(x.totals?.views)+' '+t('переглядів','views')+' · '+number(x.totals?.subscribers)+' '+t('підписників','subscribers')+'</span><small>'+localeTime(new Date(x.observedAt))+'</small></div>').join(''):'<p>'+t('Вимірювань ще немає','No saved measurements yet')+'</p>')+'</div>'+
-   '<p class="vs-hint">'+t('Порівняння каналів показує фактичні останні вимірювання в різний час, а не синхронні 30/90-денні звіти.','Channel comparisons use last observed values at possibly different times, not fabricated 30/90-day reports.')+'</p>';
+   '<p class="vs-hint">'+t('Звіти за 30 і 90 днів стосуються активного каналу. Міжканальне порівняння — останні зафіксовані вимірювання в різний час.','30/90-day reports apply to the active channel. Cross-channel comparisons use last observed snapshots at potentially different times.')+'</p>';
  }
  advanced.addEventListener('click',e=>{if(e.target.closest('#vs-insights-refresh'))gather()});
+ advanced.addEventListener('change',e=>{if(e.target.id==='vs-insights-days'){const days=Number(e.target.value);if(![7,30,90].includes(days))return;insightsDays=days;insightsReport=null;gather()}});
  document.querySelector('#language')?.addEventListener('change',()=>{renderStudio();renderNotices();renderInsights()});
  window.addEventListener('viver-youtube-channel-switched',()=>{insightsReport=null;insightsError='';lastInsights=0;renderInsights();if(advanced.parentElement?.open)gather()});
  advanced.parentElement?.addEventListener('toggle',()=>{if(advanced.parentElement.open&&Date.now()-lastInsights>300000)gather()});
