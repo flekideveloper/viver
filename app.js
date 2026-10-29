@@ -74,7 +74,7 @@ function nav(next,updateHash=true){
  window.scrollTo({top:0,behavior:'instant'});
 }
 $('[data-page]').forEach(el=>el.addEventListener('click',()=>nav(el.dataset.page)));
-$('#social-sidebar-nav')?.addEventListener('click',event=>{const button=event.target.closest('[data-page]');if(button)nav(button.dataset.page)});
+// Connected social links are managed by platform-hub.js after OAuth verification.
 $$('[data-goto]').forEach(el=>el.addEventListener('click',()=>nav(el.dataset.goto)));
 const syncLocation=()=>{const key=location.hash.slice(1);if(key!==page)nav(key,false)};
 window.addEventListener('hashchange',syncLocation);
