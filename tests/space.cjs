@@ -32,7 +32,7 @@ const DB={prepare(sql){let args=[];
   async run(){
    const [a,b,c,d,e,f,g,h,i,j]=args;let changes=1;
    if(sql.startsWith('INSERT INTO auth_limits')){const old=limits.get(a);limits.set(a,{attempts:old&&old.reset_at>Date.now()?old.attempts+1:1,reset_at:old&&old.reset_at>Date.now()?old.reset_at:b})}
-   else if(sql.startsWith('INSERT INTO users')){if([...users.values()].some(x=>x.username===b))throw Error('unique');users.set(a,{id:a,username:b,pass_salt:c,pass_hash:d,recovery_hash:e,created_at:f})}
+   else if(sql.startsWith('INSERT INTO users')){if([...users.values()].some(x=>x.username===b))throw Error('UNIQUE constraint failed: users.username');users.set(a,{id:a,username:b,pass_salt:c,pass_hash:d,recovery_hash:e,created_at:f})}
    else if(sql.startsWith('UPDATE users SET')){const u=users.get(d);Object.assign(u,{pass_salt:a,pass_hash:b,recovery_hash:c})}
    else if(sql.startsWith('INSERT INTO sessions'))sessions.set(a,{token_hash:a,user_id:b,created_at:c,expires_at:d});
    else if(sql.startsWith('DELETE FROM sessions WHERE token_hash'))sessions.delete(a);
@@ -52,6 +52,10 @@ const DB={prepare(sql){let args=[];
  return query;
 }};
 const source=fs.readFileSync(path.join(__dirname,'../space-worker/src/index.js'),'utf8');
+assert(source.includes('iterations:100000'),'PBKDF2 iteration count respects the Cloudflare Workers hard cap');
+assert(!source.includes('iterations:120000'),'unsupported 120,000 rounds must not return');
+assert(source.includes("error:'registration_unavailable'"),'non-duplicate registration failures are not reported as taken usernames');
+
 const sandbox={crypto:webcrypto,URL,Request,Response,TextEncoder,TextDecoder,btoa,atob,Uint8Array,Date,JSON,Error,console};
 sandbox.globalThis=sandbox;
 vm.runInNewContext(source.replace('export default {','globalThis.worker = {'),sandbox);
