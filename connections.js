@@ -82,7 +82,6 @@
   busy.add('youtube');render();
   try{
    await request('/youtube/channels/select',{method:'POST',body:{channelId:id}});
-   window.dispatchEvent(new CustomEvent('viver-youtube-channel-switched',{detail:{channelId:id}}));
    await refresh();
    announce(say('YouTube-канал змінено','YouTube channel switched'));
   }catch(e){announce(e.message||say('Не вдалося змінити канал','Unable to switch channel'))}
@@ -94,7 +93,6 @@
   busy.add('youtube');render();
   try{
    await request('/youtube/channels/'+encodeURIComponent(id),{method:'DELETE'});
-   window.dispatchEvent(new CustomEvent('viver-youtube-channel-switched',{detail:{channelId:null}}));
    await refresh();announce(say('Канал відключено','Channel disconnected'));
   }catch(e){announce(e.message||say('Помилка відключення','Unable to disconnect channel'))}
   finally{busy.delete('youtube');render()}
@@ -114,8 +112,10 @@
  async function refresh(){
   if(status==='loading'&&lastRefresh)return;
   try{
+   const previousChannel=fields.activeYoutubeChannel;
    const data=await request('/connections');
    fields.providers=data.providers||{};fields.connections=data.connections||[];fields.youtubeChannels=data.youtubeChannels||[];fields.activeYoutubeChannel=data.activeYoutubeChannel||null;fields.maxYoutubeChannels=data.maxYoutubeChannels||3;status='ready';lastRefresh=Date.now();
+   if(previousChannel!==fields.activeYoutubeChannel)window.dispatchEvent(new CustomEvent('viver-youtube-channel-switched',{detail:{channelId:fields.activeYoutubeChannel}}));
   }catch{status='offline';fields.providers={};fields.connections=[];fields.youtubeChannels=[];fields.activeYoutubeChannel=null}
   render();
   window.dispatchEvent(new Event('viver-connections-updated'));
@@ -143,7 +143,6 @@
   busy.add(provider);render();
   try{
    await request('/connections/'+provider,{method:'DELETE'});
-   if(provider==='youtube')window.dispatchEvent(new CustomEvent('viver-youtube-channel-switched',{detail:{channelId:null}}));
    await refresh();announce(say('Акаунт відключено','Account disconnected'));
   }catch(e){announce(e.message||say('Помилка відключення','Could not disconnect'))}
   finally{busy.delete(provider);render()}
