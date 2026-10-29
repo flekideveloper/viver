@@ -37,6 +37,9 @@ jobs:
           test -s overview-analytics.js
           test -s creator-studio.js
           test -s platform-hub.js
+          test -s viver-space.js
+          test -s viver-tools.js
+          test -s viver-next.css
           test -s style.css
           test -s favicon.svg
           test -s privacy.html
@@ -52,6 +55,9 @@ jobs:
           node --check overview-analytics.js
           node --check creator-studio.js
           node --check platform-hub.js
+          node --check viver-space.js
+          node --check viver-tools.js
+          node --check space-worker/src/index.js
           grep -q 'src="./app.js' index.html
           grep -q 'href="./style.css' index.html
 
@@ -60,7 +66,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p _site
-          cp index.html app.js features.js connections.js youtube.js overview-analytics.js creator-studio.js platform-hub.js style.css favicon.svg privacy.html terms.html legal.css googlecdd868657411e596.html _site/
+          cp index.html app.js features.js connections.js youtube.js overview-analytics.js creator-studio.js platform-hub.js viver-space.js viver-tools.js viver-next.css style.css favicon.svg privacy.html terms.html legal.css googlecdd868657411e596.html _site/
           touch _site/.nojekyll
           printf '%s\n' 'VIVER static site prepared.'
 

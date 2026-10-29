@@ -12,6 +12,9 @@ on:
       - 'overview-analytics.js'
       - 'creator-studio.js'
       - 'platform-hub.js'
+      - 'viver-space.js'
+      - 'viver-tools.js'
+      - 'space-worker/**'
       - 'auth-worker/**'
       - 'index.html'
       - 'tests/**'
@@ -40,6 +43,9 @@ jobs:
           node --check overview-analytics.js
           node --check creator-studio.js
           node --check platform-hub.js
+          node --check viver-space.js
+          node --check viver-tools.js
+          node --check space-worker/src/index.js
           node --check tests/platform-hub.cjs
           node --check tests/youtube-channels.cjs
           node --check auth-worker/src/index.js

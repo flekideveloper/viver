@@ -10,7 +10,7 @@ const validDate=s=>typeof s==='string'&&s.length>0&&Number.isFinite(new Date(s).
 const clamp=(n,min,max)=>Math.min(max,Math.max(min,n));
 const metricValue=v=>v===null||v===undefined||v===''?null:Number.isFinite(Number(v))&&Number(v)>=0?Math.min(Number(v),1e15):null;
 const translations={
- uk:{workspace:'РОБОЧИЙ ПРОСТІР',home:'Огляд',planner:'Планер',calendar:'Календар',noteDetails:'Деталі стікера',noteGroup:'Група',noteLink:'Посилання (HTTPS)',script:'Сценарій',record:'Запис',editing:'Монтаж',gray:'Сіра',cosmic:'Космічна',reminders:'Нагадування',board:'Дошка ідей',platforms:'Підключення',accountConnections:'Підключені акаунти',youtube:'YouTube',tiktok:'TikTok',twitch:'Twitch',x:'X',settings:'Налаштування',local:'Дані на цьому пристрої',
+ uk:{workspace:'РОБОЧИЙ ПРОСТІР',home:'Огляд',planner:'Планер',calendar:'Календар',noteDetails:'Деталі стікера',noteGroup:'Група',noteLink:'Посилання (HTTPS)',script:'Сценарій',record:'Запис',editing:'Монтаж',gray:'Сіра',cosmic:'Космічна',reminders:'Нагадування',board:'Дошка ідей',platforms:'Підключення',accountConnections:'Підключені акаунти',youtube:'YouTube',tiktok:'TikTok',twitch:'Twitch',x:'X',settings:'Налаштування',teams:'Команди',local:'Дані на цьому пристрої',
  overviewTitle:'Огляд',scheduled:'Заплановано',content:'Контент',openTasks:'Активні нагадування',tasks:'Завдання',notes:'Стікери',ideas:'Ідеї',upcoming:'Найближче',viewAll:'Усі',contentPlan:'Контент-план',
  newPost:'Новий запис',title:'Назва',platform:'Платформа',stage:'Стан',date:'Дата й час',details:'Нотатка',optional:'Необов’язково',other:'Інше',idea:'Ідея',draft:'У процесі',ready:'Готово',published:'Опубліковано',addPost:'Додати запис',myContent:'Мій контент',all:'Усі',cancel:'Скасувати',saveChanges:'Зберегти зміни',editPost:'Редагувати запис',contentPlaceholder:'Назва відео або стриму',
  alerts:'Сповіщення',newReminder:'Нове нагадування',taskPlaceholder:'Що потрібно зробити?',priority:'Пріоритет',normal:'Звичайний',high:'Високий',low:'Низький',addReminder:'Додати',myReminders:'Мої нагадування',open:'Активні',done:'Готові',editReminder:'Редагувати нагадування',
@@ -18,7 +18,7 @@ const translations={
  appearance:'Вигляд',dark:'Темна',light:'Світла',language:'Мова',backup:'Резервна копія',export:'Експорт',import:'Імпорт',reset:'Видалити локальні дані',delete:'Видалити',storageNotice:'Нагадування, планер і стікери зберігаються лише в цьому браузері.',searchPlaceholder:'Знайти в моїх записах…',close:'Закрити',
  noReminders:'Нагадувань ще немає',noPlans:'Записів ще немає',noResults:'Нічого не знайдено',noNotes:'Нотатка',emptyNote:'Нова ідея…',edit:'Редагувати',duplicate:'Дублювати',remove:'Видалити',overdue:'Прострочено',
  created:'Збережено',updated:'Оновлено',removed:'Видалено',confirmDelete:'Видалити запис?',confirmAll:'Видалити всі локальні дані VIVER? Цю дію не можна скасувати.',confirmAgain:'Підтверди остаточне видалення всіх нотаток і планів.',confirmImport:'Замінити поточні записи даними з файлу?',badBackup:'Невірний файл резервної копії',tooLarge:'Максимальний розмір файлу — 2 МБ',backupDone:'Копію збережено',importDone:'Копію відновлено',storageFail:'Не вдалося зберегти дані. Зроби резервну копію.',notificationOn:'Сповіщення увімкнено, поки VIVER відкритий',notificationOff:'Браузер не дозволяє сповіщення',notificationUnsupported:'У цьому браузері сповіщення недоступні',notifyPrefix:'Нагадування: ',noteCount:'сті́керів'},
- en:{workspace:'WORKSPACE',home:'Overview',planner:'Planner',calendar:'Calendar',noteDetails:'Sticky details',noteGroup:'Group',noteLink:'Link (HTTPS)',script:'Script',record:'Recording',editing:'Editing',gray:'Gray',cosmic:'Cosmic',reminders:'Reminders',board:'Idea board',platforms:'Connections',accountConnections:'Connected accounts',youtube:'YouTube',tiktok:'TikTok',twitch:'Twitch',x:'X',settings:'Settings',local:'Stored on this device',
+ en:{workspace:'WORKSPACE',home:'Overview',planner:'Planner',calendar:'Calendar',noteDetails:'Sticky details',noteGroup:'Group',noteLink:'Link (HTTPS)',script:'Script',record:'Recording',editing:'Editing',gray:'Gray',cosmic:'Cosmic',reminders:'Reminders',board:'Idea board',platforms:'Connections',accountConnections:'Connected accounts',youtube:'YouTube',tiktok:'TikTok',twitch:'Twitch',x:'X',settings:'Settings',teams:'Teams',local:'Stored on this device',
  overviewTitle:'Overview',scheduled:'Scheduled',content:'Content',openTasks:'Open reminders',tasks:'Tasks',notes:'Sticky notes',ideas:'Ideas',upcoming:'Up next',viewAll:'View all',contentPlan:'Content plan',
  newPost:'New content',title:'Title',platform:'Platform',stage:'Status',date:'Date & time',details:'Note',optional:'Optional',other:'Other',idea:'Idea',draft:'In progress',ready:'Ready',published:'Published',addPost:'Add content',myContent:'My content',all:'All',cancel:'Cancel',saveChanges:'Save changes',editPost:'Edit content',contentPlaceholder:'Video or stream title',
  alerts:'Notifications',newReminder:'New reminder',taskPlaceholder:'What needs doing?',priority:'Priority',normal:'Normal',high:'High',low:'Low',addReminder:'Add',myReminders:'My reminders',open:'Open',done:'Done',editReminder:'Edit reminder',
@@ -57,7 +57,7 @@ function lang(){
  renderHome();renderPlans();renderReminders();renderBoard();window.VIVERExtras?.translate?.();
 }
 function nav(next,updateHash=true){
- if(!['home','planner','calendar','reminders','board','platforms','settings',...PROVIDER_PAGES].includes(next))next='home';
+ if(!['home','planner','calendar','reminders','board','platforms','settings','teams',...PROVIDER_PAGES].includes(next))next='home';
  if(PROVIDER_PAGES.includes(next)){
   const linked=window.VIVERConnections?.getConnections?.().some(x=>x.provider===next&&x.connected);
   if(!linked)next='platforms';
@@ -335,5 +335,5 @@ document.addEventListener('keydown',ev=>{
  if(ev.key==='Escape'){$('#sidebar').classList.remove('open');$('#scrim').classList.remove('show')}
 });
 window.VIVERCore={get state(){return state},save,renderHome,renderPlans,renderReminders,renderBoard,nav,toast,esc,t,dateFmt,stageLabel,uid,normalise,validDate,get page(){return page},get noteColor(){return noteColor}};
-defaults();renderTheme();setZoom(1);lang();nav(['home','planner','calendar','reminders','board','platforms','settings',...PROVIDER_PAGES].includes(location.hash.slice(1))?location.hash.slice(1):'home',false);notifyDue();
+defaults();renderTheme();setZoom(1);lang();nav(['home','planner','calendar','reminders','board','platforms','settings','teams',...PROVIDER_PAGES].includes(location.hash.slice(1))?location.hash.slice(1):'home',false);notifyDue();
 })();
