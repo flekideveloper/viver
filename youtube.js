@@ -17,7 +17,7 @@
  }
  function render(){
   if(!linked()){panel.hidden=true;model=null;lastFetch=0;wasConnected=false;errorMessage='';return}
-  panel.hidden=!!window.VIVERPlatformHub&&window.VIVERPlatformHub.getSelected()!=='youtube';
+  panel.hidden=false;
   $('#youtube-section-title').textContent=tr('Мій канал','My channel');
   $('#youtube-refresh-text').textContent=tr('Оновити','Refresh');
   button.disabled=loading;
@@ -79,11 +79,11 @@
   const isConnected=linked();
   if(!isConnected){render();return}
   const justConnected=!wasConnected;wasConnected=true;render();
-  if(location.hash==='#platforms'||$('#page-platforms')?.classList.contains('active'))load(justConnected);
+  if($('#page-youtube')?.classList.contains('active'))load(justConnected);
  }
  window.addEventListener('viver-connections-updated',update);
  window.addEventListener('hashchange',update);
- document.addEventListener('click',ev=>{if(ev.target.closest('[data-page="platforms"],[data-goto="platforms"]'))setTimeout(update,0)});
+ document.addEventListener('click',ev=>{if(ev.target.closest('[data-page="youtube"],[data-goto="youtube"]'))setTimeout(update,0)});
  $('#language')?.addEventListener('change',()=>{if(model)render()});
  button.addEventListener('click',()=>load(true));
  window.VIVERYoutube={update,load};
