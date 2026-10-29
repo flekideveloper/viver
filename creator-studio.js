@@ -42,6 +42,7 @@
  }
  function normalize(x){return String(x||'').toLocaleLowerCase().replace(/[^a-zа-яіїєґ0-9]+/giu,' ').trim().replace(/\s+/g,' ')}
  function syncPublished(){
+  if(!window.VIVERId?.getUser?.())return;
   const s=space();if(!s||!catalog?.videos)return;
   const plans=core.state.plans||[];let changed=0;
   for(const video of catalog.videos){
@@ -147,6 +148,7 @@
    '<div class="studio-empty">'+t('Вибери відео, щоб побачити статистику та утримання.','Choose a video for its statistics and retention.')+'</div>')+'</div></div>';
  }
  function plannerTab(){
+  if(!window.VIVERId?.getUser?.())return '<div class="studio-empty">'+t('Для Планера потрібен VIVER ID. Перейди в Налаштування та увійди.','Planner requires VIVER ID. Sign in from Settings.')+'</div>';
   if(!catalog)return '<div class="studio-empty">'+t('Завантажуємо список відео…','Loading video list…')+'</div>';
   const s=space(),plans=core.state.plans.filter(x=>x.platform==='youtube');
   const free=plans.filter(x=>x.status!=='published');
@@ -234,15 +236,17 @@
  }
  function jump(next){tab=next;core.nav('youtube');render();load()}
  function openPlan(planId){
-  core.nav('planner');$('#plan-filter').value='all';core.renderPlans();
+  if(!core.nav('planner'))return;$('#plan-filter').value='all';core.renderPlans();
   const target=[...document.querySelectorAll('[data-plan-edit]')].find(x=>x.dataset.planEdit===planId);target?.click();
  }
  function handleLink(videoId,planId){
+  if(!window.VIVERId?.getUser?.())return;
   const s=space(),video=catalog?.videos?.find(x=>x.id===videoId),plan=core.state.plans.find(x=>x.id===planId);
   if(!s||!video||!plan||plan.platform!=='youtube')return;
   s.links[videoId]=planId;plan.status='published';core.save();save();core.renderHome();core.renderPlans();toast('Відео пов’язано з планом','Video linked to plan');render();
  }
  function importVideo(id){
+  if(!window.VIVERId?.getUser?.())return;
   const v=catalog?.videos?.find(x=>x.id===id),s=space();if(!v||!s)return;
   let existing=core.state.plans.find(x=>s.links[id]===x.id);
   if(existing){openPlan(existing.id);return}
@@ -254,7 +258,7 @@
  }
  root.addEventListener('click',async ev=>{
   const tabButton=ev.target.closest('[data-studio-tab]');
-  if(tabButton){tab=tabButton.dataset.studioTab;render();if(tab==='goals')loadChannelStats();return}
+  if(tabButton){if(tabButton.dataset.studioTab==='planner'&&core.requireId&&!core.requireId('planner'))return;tab=tabButton.dataset.studioTab;render();if(tab==='goals')loadChannelStats();return}
   const more=ev.target.closest('[data-studio-more]');
   if(more&&catalog?.nextPageToken){
    more.disabled=true;
