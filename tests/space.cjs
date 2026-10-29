@@ -66,16 +66,19 @@ async function run(route,method='GET',token='',data=null,origin){
 (async()=>{
  assert.equal((await run('/health')).body.service,'viver-space');
  assert.equal((await run('/v1/workspace')).status,401,'no unauthenticated cloud access');
- assert.equal((await run('/v1/auth/register','POST','',{username:'a',password:'short'})).status,400,'bad password rejected');
- const first=await run('/v1/auth/register','POST','',{username:'creator_one',password:'Strongpass123'});
+ assert.equal((await run('/v1/auth/register','POST','',{username:'a',password:'short'})).status,400,'invalid credentials rejected');
+ for(const password of ['abc1!','abc1!1','abcd12','abcd!!','abcde1','abcd1 ', 'abcd1!'.repeat(22)]){
+  assert.equal((await run('/v1/auth/register','POST','',{username:'weak_user',password})).status,400,'bad password rejected: '+password.slice(0,15));
+ }
+ const first=await run('/v1/auth/register','POST','',{username:'creator_one',password:'abcd1!'});
  assert.equal(first.status,201,JSON.stringify(first.body));
  assert.equal(first.body.recovery.length,43);
  const u=first.body.user,token=first.body.token;
- assert.notEqual(users.get(u.id).pass_hash,'Strongpass123','password stored hashed');
+ assert.notEqual(users.get(u.id).pass_hash,'abcd1!','password stored hashed');
  assert.notEqual(users.get(u.id).recovery_hash,first.body.recovery,'recovery key hashed');
- assert.equal((await run('/v1/auth/register','POST','',{username:'creator_one',password:'Strongpass123'})).status,409,'duplicate denied');
+ assert.equal((await run('/v1/auth/register','POST','',{username:'creator_one',password:'abcd1!'})).status,409,'duplicate denied');
  assert.equal((await run('/v1/auth/login','POST','',{username:'creator_one',password:'wrong'})).status,401);
- const login=await run('/v1/auth/login','POST','',{username:'creator_one',password:'Strongpass123'});
+ const login=await run('/v1/auth/login','POST','',{username:'creator_one',password:'abcd1!'});
  assert.equal(login.status,200);
  assert.notEqual(login.body.token,token,'new sessions randomized');
  assert.equal((await run('/v1/auth/me','GET',token)).body.user.username,'creator_one');
@@ -87,8 +90,11 @@ async function run(route,method='GET',token='',data=null,origin){
  assert.equal(workspaces.get(u.id)?.version,1,'cloud row keeps correct numeric version');
  assert.equal((await run('/v1/workspace','PUT',token,{version:0,workspace:{}})).status,409,'version conflict avoids lost updates');
  assert.equal((await run('/v1/workspace','GET',token)).body.workspace.workspace.plans[0].title,'private plan');
- const second=await run('/v1/auth/register','POST','',{username:'editor_two',password:'Secure789pass'});
+ const second=await run('/v1/auth/register','POST','',{username:'editor_two',password:'other1!'});
  assert.equal(second.status,201);
+ const unicode=await run('/v1/auth/register','POST','',{username:'ukrainian_user',password:'Прив1!'});
+ assert.equal(unicode.status,201,'Unicode letters satisfy four-letter rule');
+ assert.equal((await run('/v1/auth/login','POST','',{username:'ukrainian_user',password:'Прив1!'})).status,200);
  const sToken=second.body.token;
  assert.equal((await run('/v1/workspace','GET',sToken)).body.exists,false,'no cross-account leakage');
  const create=await run('/v1/teams','POST',token,{name:'Creators'});
@@ -112,11 +118,11 @@ async function run(route,method='GET',token='',data=null,origin){
  assert.equal(updated.status,200);
  assert.equal((await run('/v1/teams/'+teamId,'GET',token)).body.tasks[0].status,'done');
  assert.equal((await run('/v1/teams','GET',token,null,'https://evil.example')).status,403,'forbidden Origin denied');
- const reset=await run('/v1/auth/recover','POST','',{username:'creator_one',recovery:first.body.recovery,password:'BrandNewPass123'});
+ const reset=await run('/v1/auth/recover','POST','',{username:'creator_one',recovery:first.body.recovery,password:'newer1!'});
  assert.equal(reset.status,200,'recovery grants new session');
  assert.notEqual(reset.body.recovery,first.body.recovery,'recovery rotates key');
  assert.equal((await run('/v1/auth/me','GET',token)).status,401,'recovery revokes old sessions');
- assert.equal((await run('/v1/auth/login','POST','',{username:'creator_one',password:'BrandNewPass123'})).status,200);
+ assert.equal((await run('/v1/auth/login','POST','',{username:'creator_one',password:'newer1!'})).status,200);
  assert.equal((await run('/v1/auth/logout','POST',sToken)).status,200);
  assert.equal((await run('/v1/auth/me','GET',sToken)).status,401,'logout revokes session');
  console.log('VIVER space backend: PASS — registration, sessions, recovery, cross-user isolation, optimistic backup, single-use invites, permissions');
