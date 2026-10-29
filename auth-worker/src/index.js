@@ -216,8 +216,8 @@ async function refreshIfNeeded(env,row){
   const encryptedAccess=await encrypted(env,next.access_token);
   const encryptedRefresh=next.refresh_token?await encrypted(env,next.refresh_token):row.refresh_enc;
   const expires=Date.now()+Math.max(60,Number(next.expires_in)||3600)*1000;
-  await env.DB.prepare('UPDATE oauth_accounts SET token_enc=?,refresh_enc=?,expires_at=?,updated_at=? WHERE client_hash=? AND provider=?')
-   .bind(encryptedAccess,encryptedRefresh,expires,Date.now(),row.client_hash,row.provider).run();
+  await env.DB.prepare('UPDATE oauth_accounts SET token_enc=?,refresh_enc=?,expires_at=?,updated_at=? WHERE client_hash=? AND provider=? AND subject=?')
+   .bind(encryptedAccess,encryptedRefresh,expires,Date.now(),row.client_hash,row.provider,row.subject).run();
   if(row.provider==='youtube'){
    await env.DB.prepare('UPDATE oauth_youtube_channels SET token_enc=?,refresh_enc=?,expires_at=?,updated_at=? WHERE client_hash=? AND channel_id=?')
     .bind(encryptedAccess,encryptedRefresh,expires,Date.now(),row.client_hash,row.subject).run();
