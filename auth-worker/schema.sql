@@ -77,3 +77,19 @@ CREATE TABLE IF NOT EXISTS social_metric_snapshots (
  PRIMARY KEY(client_hash,provider,subject,date)
 );
 CREATE INDEX IF NOT EXISTS idx_social_history ON social_metric_snapshots(client_hash,provider,subject,date);
+
+-- VIVER YouTube multi-channel vault (up to 3 per local connection capability).
+-- Retains the original oauth_accounts YouTube row as the currently selected channel,
+-- so earlier installations and API routes remain compatible.
+CREATE TABLE IF NOT EXISTS oauth_youtube_channels (
+ client_hash TEXT NOT NULL,
+ channel_id TEXT NOT NULL,
+ label TEXT NOT NULL,
+ avatar TEXT NOT NULL DEFAULT '',
+ token_enc TEXT NOT NULL,
+ refresh_enc TEXT,
+ expires_at INTEGER NOT NULL,
+ updated_at INTEGER NOT NULL,
+ PRIMARY KEY(client_hash,channel_id)
+);
+CREATE INDEX IF NOT EXISTS idx_youtube_vault_client ON oauth_youtube_channels(client_hash,updated_at);
