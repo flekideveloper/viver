@@ -42,6 +42,7 @@ jobs:
           test -s privacy.html
           test -s terms.html
           test -s legal.css
+          test -s googlecdd868657411e596.html
           grep -q 'href="./privacy.html"' index.html
           grep -q 'href="./terms.html"' index.html
           node --check app.js
@@ -59,7 +60,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p _site
-          cp index.html app.js features.js connections.js youtube.js overview-analytics.js creator-studio.js platform-hub.js style.css favicon.svg privacy.html terms.html legal.css _site/
+          cp index.html app.js features.js connections.js youtube.js overview-analytics.js creator-studio.js platform-hub.js style.css favicon.svg privacy.html terms.html legal.css googlecdd868657411e596.html _site/
           touch _site/.nojekyll
           printf '%s\n' 'VIVER static site prepared.'
 
