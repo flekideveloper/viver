@@ -553,3 +553,37 @@ dialog{background:var(--card);border:1px solid var(--border);color:var(--text);b
 .social-profile>div{flex:1}
 .social-profile-avatar{height:40px;width:40px;border-radius:10px;object-fit:cover;flex:none;background:var(--hover)}
 .social-profile-fallback{display:grid;place-items:center;color:var(--text);font-size:16px}
+
+
+/* VIVER v1.0: network pages live in the left sidebar, never inside Connections. */
+.sidebar-social{margin-top:21px;padding-top:15px;border-top:1px solid var(--border);min-height:0}
+.sidebar-social[hidden]{display:none!important}
+.sidebar-social .nav-label{margin-bottom:8px}
+.sidebar-social .navigation{gap:3px;max-height:min(40vh,260px);overflow-y:auto}
+.sidebar-social-mark{width:23px;height:23px;border-radius:7px;display:grid;place-items:center;flex:none;color:#fff;font-size:13px;line-height:1}
+.sidebar-social-mark.connected-platform-youtube{background:#dc3737}
+.sidebar-social-mark.connected-platform-tiktok{background:#151619}
+.sidebar-social-mark.connected-platform-twitch{background:#7652b4}
+.sidebar-social-mark.connected-platform-x{background:#151619}
+.sidebar-social .nav-item{font-weight:580;gap:11px}
+.sidebar-social .nav-item.active{background:var(--hover);color:var(--text)}
+.sidebar-social .nav-item:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+#page-platforms .connections-panel{max-width:950px}
+#page-youtube .youtube-live-panel,
+#page-youtube .studio-panel,
+#page-youtube .creator-overview,
+#page-youtube .creator-home-tools,
+.social-network-page .social-studio-panel{max-width:1050px}
+#page-youtube .youtube-live-panel,#page-youtube .studio-panel,.social-network-page .social-studio-panel{padding:19px 21px;margin:0 0 15px}
+#page-youtube .creator-overview{margin:0 0 15px}
+#page-youtube .creator-home-tools{margin:0 0 15px}
+#page-youtube .studio-panel .studio-tabs{scrollbar-width:thin}
+#page-settings .imported-reports-collapse{max-width:950px;margin:28px 0 0}
+#page-settings .imported-reports-collapse[hidden]{display:none}
+.social-network-page .page-title{margin-bottom:16px}
+.social-network-mount{min-width:0}
+@media(max-width:650px){
+ .sidebar-social{margin-top:12px;padding-top:12px}
+ #page-youtube .youtube-live-panel,#page-youtube .studio-panel,.social-network-page .social-studio-panel{padding:15px}
+ #page-youtube .creator-home-tools{grid-template-columns:1fr}
+}
