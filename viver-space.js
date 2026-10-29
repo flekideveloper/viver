@@ -107,8 +107,8 @@
  }
  async function restoreSession(){
   if(!token)return;
-  try{const me=await api('/v1/auth/me');user=me.user;render();loadTeams()}
-  catch(e){if(e.message==='authentication_required'){saveSession('');user=null} else error=t('Сервер VIVER ID наразі недоступний','VIVER ID server unavailable');render()}
+  try{const me=await api('/v1/auth/me');user=me.user;render();document.dispatchEvent(new Event('viver-id-changed'));loadTeams()}
+  catch(e){if(e.message==='authentication_required'){saveSession('');user=null} else error=t('Сервер VIVER ID наразі недоступний','VIVER ID server unavailable');render();document.dispatchEvent(new Event('viver-id-changed'))}
  }
  function renderTeams(){
   const root=document.querySelector('#vs-teams-content');if(!root)return;
