@@ -48,6 +48,7 @@ const read=f=>fs.readFileSync(path.join(__dirname,'..',f),'utf8');
  releaseAuth(reply({user:{id:'verified',username:'creator'}}));
  await new Promise(resolve=>setTimeout(resolve,35));
  assert.equal(c.page,'calendar','verified session restores requested Calendar');
+ for(let i=0;i<24&&!$('#calendar-content').textContent.includes('PRIVATE SECRET VIDEO');i++)$('#calendar-next').click();
  assert($('#calendar-content').textContent.includes('PRIVATE SECRET VIDEO'),'Calendar data returned after verification');
  assert.equal(c.nav('board'),true,'verified user opens Idea Board');
  assert($('#notes-layer').textContent.includes('PRIVATE SECRET IDEA'),'Idea Board data visible only after verification');
