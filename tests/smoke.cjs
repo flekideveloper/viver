@@ -28,6 +28,7 @@ const vm=require('node:vm');
   notes:[{id:'old-note',text:'My original sticky',color:'yellow',x:100,y:125,z:1}]
  };
  window.localStorage.setItem('viver-workspace-v1',JSON.stringify(previous));
+ window.VIVERId={getUser:()=>({id:'smoke-id',username:'smoke'})};
  const context=dom.getInternalVMContext();
  vm.runInContext(read('app.js'),context,{filename:'app.js'});
  vm.runInContext(read('features.js'),context,{filename:'features.js'});
