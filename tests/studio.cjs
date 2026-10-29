@@ -3,10 +3,10 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const {JSDOM,VirtualConsole}=require('jsdom');
 const html=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
-const dom=new JSDOM(html,{url:'https://flekideveloper.github.io/viver/#platforms',runScripts:'outside-only',pretendToBeVisual:true,virtualConsole:new VirtualConsole()});
+const dom=new JSDOM(html,{url:'https://flekideveloper.github.io/viver/#youtube',runScripts:'outside-only',pretendToBeVisual:true,virtualConsole:new VirtualConsole()});
 const {window}=dom,doc=window.document,$=q=>doc.querySelector(q),click=q=>{assert($(q),'Missing '+q);$(q).click()};
 const plans=[{id:'planned',title:'Exact video title',date:'2026-10-20T16:00',status:'ready',platform:'youtube',notes:'',checks:[]}];
-let saves=0,connected=false,channelCalls=0,videoCalls=0,retentionCalls=0,comparisonCalls=0,page='platforms';
+let saves=0,connected=false,channelCalls=0,videoCalls=0,retentionCalls=0,comparisonCalls=0,page='youtube';
 const data={
  channelId:'UCabcdefghijklmnopqrstuv',
  videos:[
