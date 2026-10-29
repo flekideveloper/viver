@@ -30,6 +30,7 @@ const auth={
   throw Error('Unexpected request '+url);
  }
 };
+window.VIVERId={getUser:()=>({id:'studio-test',username:'studio'})};
 window.VIVERConnections=auth;
 window.VIVERCore={
  state:{plans,language:'uk'},
