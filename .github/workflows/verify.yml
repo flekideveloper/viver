@@ -41,6 +41,7 @@ jobs:
           node --check creator-studio.js
           node --check platform-hub.js
           node --check tests/platform-hub.cjs
+          node --check tests/youtube-channels.cjs
           node --check auth-worker/src/index.js
           node --check tests/oauth.cjs
           node --check tests/smoke.cjs
@@ -55,3 +56,5 @@ jobs:
         run: node tests/studio.cjs
       - name: Test connected-only platform tabs
         run: node tests/platform-hub.cjs
+      - name: Test multi-channel YouTube switcher
+        run: node tests/youtube-channels.cjs
