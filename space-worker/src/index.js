@@ -16,7 +16,7 @@ function headers(){return {'Access-Control-Allow-Origin':SITE,'Access-Control-Al
 function reply(data,status=200){return new Response(JSON.stringify(data),{status,headers:{...headers(),'Content-Type':'application/json; charset=utf-8'}})}
 async function body(req){if(Number(req.headers.get('content-length')||0)>1500000)throw Error('too_large');const raw=await req.text();if(raw.length>1500000)throw Error('too_large');try{return JSON.parse(raw)}catch{throw Error('invalid_json')}}
 function username(s){return typeof s==='string'&&/^[a-zA-Z0-9][a-zA-Z0-9._-]{2,23}$/.test(s)?s.toLowerCase():null}
-function goodPass(s){return typeof s==='string'&&s.length>=10&&s.length<=128&&/[a-zA-Z]/.test(s)&&/[0-9]/.test(s)}
+function goodPass(s){return typeof s==='string'&&s.length>=6&&s.length<=128&&(s.match(/\p{L}/gu)||[]).length>=4&&/[0-9]/.test(s)&&/[^\p{L}0-9\s]/u.test(s)}
 async function limit(env,req,purpose,who,max){
  const remote=req.headers.get('CF-Connecting-IP')||'unknown';
  const key=await digest(purpose+':'+remote+':'+(who||''));
