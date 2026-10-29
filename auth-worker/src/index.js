@@ -351,6 +351,8 @@ function sumReport(rows,keys){
 function changePct(current,previous){return previous>0?Math.round(((current-previous)/previous)*1000)/10:null}
 function trafficLabel(type){return String(type||'').slice(0,65)}
 async function youtubeAnalytics(req,env){
+ const days=Number(new URL(req.url).searchParams.get('days')||7);
+ if(![7,30,90].includes(days))return json({error:'invalid_period'},400);
  const capability=authHeader(req);if(!capability)return json({error:'Connection key required'},401);
  if(!config(env,'youtube'))return json({error:'youtube_not_configured'},409);
  const clientHash=await hash(capability);
@@ -361,12 +363,12 @@ async function youtubeAnalytics(req,env){
  const now=Date.now();
  const cached=await env.DB.prepare('SELECT channel_id,payload,updated_at FROM youtube_analytics_cache WHERE client_hash=?').bind(clientHash).first();
  if(cached&&cached.channel_id===row.subject&&now-cached.updated_at<ANALYTICS_TTL){
-  try{return json({...JSON.parse(cached.payload),updatedAt:cached.updated_at,fromCache:true})}catch{}
+  try{const snapshot=JSON.parse(cached.payload);if((snapshot.period?.windowDays||7)===days)return json({...snapshot,updatedAt:cached.updated_at,fromCache:true})}catch{}
  }
  let accessToken;
  try{accessToken=await decrypted(env,active.token_enc)}
  catch{return json({error:'youtube_reconnect_required'},401)}
- const params={startDate:dateUTC(-23),endDate:dateUTC(-1),metrics:REPORT_METRICS.join(','),dimensions:'day',sort:'day'};
+ const params={startDate:dateUTC(-(days*2+10)),endDate:dateUTC(-1),metrics:REPORT_METRICS.join(','),dimensions:'day',sort:'day'};
  let daily;
  try{daily=await analyticsQuery(accessToken,params)}
  catch(e){
@@ -378,7 +380,7 @@ async function youtubeAnalytics(req,env){
  const dates=daily.filter(x=>/^\d{4}-\d{2}-\d{2}$/.test(String(x.day||''))).sort((a,b)=>a.day.localeCompare(b.day));
  const end=dates.length?dates.at(-1).day:null;
  if(!end)return json({empty:true,reason:'youtube_analytics_no_data',channel:{id:row.subject,label:row.label},period:null,updatedAt:now});
- const start=dateShift(end,-6),priorEnd=dateShift(end,-7),priorStart=dateShift(end,-13);
+ const start=dateShift(end,1-days),priorEnd=dateShift(end,-days),priorStart=dateShift(end,1-days*2);
  const currentRows=dates.filter(x=>x.day>=start&&x.day<=end);
  const priorRows=dates.filter(x=>x.day>=priorStart&&x.day<=priorEnd);
  const current=sumReport(currentRows,REPORT_METRICS),previous=sumReport(priorRows,REPORT_METRICS);
@@ -405,7 +407,7 @@ async function youtubeAnalytics(req,env){
  const countries=get(3).map(x=>({code:String(x.country||'').slice(0,3),views:metricNumber(x.views)})).filter(x=>x.views>0).slice(0,6);
  const payload={
   channel:{id:row.subject,label:row.label},
-  period:{start,end,comparisonStart:priorStart,comparisonEnd:priorEnd,comparisonAvailable,latestCompleteDay:end},
+  period:{start,end,windowDays:days,comparisonStart:priorStart,comparisonEnd:priorEnd,comparisonAvailable,latestCompleteDay:end},
   current,previous:comparisonAvailable?previous:null,growth,
   daily:currentRows.map(x=>({date:x.day,views:metricNumber(x.views),subscribersGained:metricNumber(x.subscribersGained)})),
   traffic,searchTerms,devices,countries,
