@@ -37,7 +37,7 @@ const DB={prepare(sql){let args=[];
    else if(sql.startsWith('INSERT INTO sessions'))sessions.set(a,{token_hash:a,user_id:b,created_at:c,expires_at:d});
    else if(sql.startsWith('DELETE FROM sessions WHERE token_hash'))sessions.delete(a);
    else if(sql.startsWith('DELETE FROM sessions WHERE user_id'))for(const [key,x] of sessions)if(x.user_id===a)sessions.delete(key);
-   else if(sql.startsWith('INSERT INTO workspaces')){if(workspaces.has(a))throw Error('unique');workspaces.set(a,{user_id:a,payload:b,version:c,updated_at:d})}
+   else if(sql.startsWith('INSERT INTO workspaces')){if(workspaces.has(a))throw Error('unique');workspaces.set(a,{user_id:a,payload:b,version:c,updated_at:d});console.log('DEBUG AFTER WORKSPACES SET',workspaces.size)}
    else if(sql.startsWith('UPDATE workspaces SET')){const row=workspaces.get(d);if(!row||row.version!==e)changes=0;else Object.assign(row,{payload:a,version:b,updated_at:c})}
    else if(sql.startsWith('INSERT INTO teams'))teams.set(a,{id:a,name:b,owner_id:c,created_at:d});
    else if(sql.startsWith('INSERT INTO team_members'))members.set(a+'|'+b,{team_id:a,user_id:b,role:c,joined_at:d});
