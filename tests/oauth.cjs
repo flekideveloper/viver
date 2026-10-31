@@ -5,15 +5,16 @@ const fs=require('node:fs');
 const vm=require('node:vm');
 const {webcrypto}=require('node:crypto');
 const source=fs.readFileSync(require('node:path').join(__dirname,'../auth-worker/src/index.js'),'utf8');
-const youtubeVault=new Map(),pending=new Map(),accounts=new Map(),youtubeCache=new Map(),snapshots=new Map(),analyticsCache=new Map(),videoCache=new Map(),socialCache=new Map(),socialHistory=new Map();
+const youtubeVault=new Map(),tiktokVault=new Map(),pending=new Map(),accounts=new Map(),youtubeCache=new Map(),snapshots=new Map(),analyticsCache=new Map(),videoCache=new Map(),socialCache=new Map(),socialHistory=new Map();
 const DB={
  prepare(sql){const entry={sql,values:[],bind(...args){this.values=args;return this},
   async first(){
    const [a,b]=this.values;
-   if(sql.includes('COUNT(*)'))return {total:sql.includes('oauth_youtube_channels')?[...youtubeVault.values()].filter(v=>v.client_hash===a).length:[...pending.values()].filter(v=>v.client_hash===a).length};
+   if(sql.includes('COUNT(*)'))return {total:sql.includes('oauth_youtube_channels')?[...youtubeVault.values()].filter(v=>v.client_hash===a).length:sql.includes('oauth_tiktok_accounts')?[...tiktokVault.values()].filter(v=>v.client_hash===a).length:[...pending.values()].filter(v=>v.client_hash===a).length};
    if(sql.includes('FROM oauth_pending'))return pending.get(a)&&pending.get(a).provider===b?pending.get(a):null;
    if(sql.includes('FROM oauth_youtube_channels'))return b?youtubeVault.get(a+'|'+b)||null:[...youtubeVault.values()].filter(v=>v.client_hash===a).sort((x,y)=>y.updated_at-x.updated_at)[0]||null;
-   if(sql.includes('SELECT subject FROM oauth_accounts'))return accounts.get(a+'|youtube')||null;
+    if(sql.includes('FROM oauth_tiktok_accounts'))return b?tiktokVault.get(a+'|'+b)||null:[...tiktokVault.values()].filter(v=>v.client_hash===a).sort((x,y)=>y.updated_at-x.updated_at)[0]||null;
+   if(sql.includes('SELECT subject FROM oauth_accounts'))return accounts.get(a+'|'+(sql.includes("provider='tiktok'")?'tiktok':'youtube'))||null;
    if(sql.includes('FROM social_overview_cache'))return socialCache.get(a+'|'+b)||null;
    if(sql.includes('FROM youtube_video_cache'))return videoCache.get(a)||null;
    if(sql.includes('FROM youtube_analytics_cache'))return analyticsCache.get(a)||null;
@@ -21,7 +22,7 @@ const DB={
    if(sql.includes('FROM oauth_accounts'))return accounts.get(a+'|'+b)||null;
    return null
   },
-  async all(){const [h,id,subject]=this.values;if(sql.includes('FROM oauth_youtube_channels'))return {results:[...youtubeVault.values()].filter(v=>v.client_hash===h).sort((a,b)=>b.updated_at-a.updated_at)};if(sql.includes('social_metric_snapshots'))return {results:[...socialHistory.values()].filter(x=>x.client_hash===h&&x.provider===id&&x.subject===subject).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,45)};
+  async all(){const [h,id,subject]=this.values;if(sql.includes('FROM oauth_youtube_channels'))return {results:[...youtubeVault.values()].filter(v=>v.client_hash===h).sort((a,b)=>b.updated_at-a.updated_at)};if(sql.includes('FROM oauth_tiktok_accounts'))return {results:[...tiktokVault.values()].filter(v=>v.client_hash===h).sort((a,b)=>b.updated_at-a.updated_at)};if(sql.includes('social_metric_snapshots'))return {results:[...socialHistory.values()].filter(x=>x.client_hash===h&&x.provider===id&&x.subject===subject).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,45)};
    if(sql.includes('youtube_snapshots'))return {results:[...snapshots.values()].filter(x=>x.client_hash===h&&x.channel_id===id).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,60)};
    return {results:[...accounts.values()].filter(v=>v.client_hash===h)}},
   async run(){
