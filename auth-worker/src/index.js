@@ -230,22 +230,38 @@ async function callback(req,env,provider){
   const access=await encrypted(env,grant.access_token);
   const refresh=grant.refresh_token?await encrypted(env,grant.refresh_token):null;
   if(provider==='youtube')await ensureYoutubeVault(env,pending.client_hash);
+  if(provider==='tiktok')await ensureTikTokVault(env,pending.client_hash);
   const previousChannel=provider==='youtube'?await env.DB.prepare('SELECT channel_id,refresh_enc FROM oauth_youtube_channels WHERE client_hash=? AND channel_id=?').bind(pending.client_hash,profile.id).first():null;
   if(provider==='youtube'&&!previousChannel){
    const count=await env.DB.prepare('SELECT COUNT(*) AS total FROM oauth_youtube_channels WHERE client_hash=?').bind(pending.client_hash).first();
    if(Number(count?.total)>=YOUTUBE_CHANNEL_LIMIT)return textPage(false,'Maximum 3 YouTube channels are allowed. Remove a channel first.');
   }
+
+  const previousTikTok=provider==='tiktok'?await env.DB.prepare('SELECT open_id,refresh_enc FROM oauth_tiktok_accounts WHERE client_hash=? AND open_id=?').bind(pending.client_hash,profile.id).first():null;
+  if(provider==='tiktok'&&!previousTikTok){
+   const count=await env.DB.prepare('SELECT COUNT(*) AS total FROM oauth_tiktok_accounts WHERE client_hash=?').bind(pending.client_hash).first();
+   if(Number(count?.total)>=TIKTOK_ACCOUNT_LIMIT)return textPage(false,'Maximum 3 TikTok accounts are allowed. Remove one first.');
+  }
   const old=await env.DB.prepare('SELECT refresh_enc,subject FROM oauth_accounts WHERE client_hash=? AND provider=?').bind(pending.client_hash,provider).first();
-  if(provider!=='youtube'&&old?.subject&&old.subject!==profile.id){
+  if(provider!=='youtube'&&provider!=='tiktok'&&old?.subject&&old.subject!==profile.id){
    await env.DB.prepare('DELETE FROM social_overview_cache WHERE client_hash=? AND provider=?').bind(pending.client_hash,provider).run();
    await env.DB.prepare('DELETE FROM social_metric_snapshots WHERE client_hash=? AND provider=?').bind(pending.client_hash,provider).run();
+  }
+  if(provider==='tiktok'&&old?.subject&&old.subject!==profile.id){
+   await env.DB.prepare("DELETE FROM social_overview_cache WHERE client_hash=? AND provider='tiktok'").bind(pending.client_hash).run();
   }
   if(provider==='youtube'&&old?.subject&&old.subject!==profile.id){
    await env.DB.prepare('DELETE FROM youtube_cache WHERE client_hash=?').bind(pending.client_hash).run();
    await env.DB.prepare('DELETE FROM youtube_analytics_cache WHERE client_hash=?').bind(pending.client_hash).run();
    await env.DB.prepare('DELETE FROM youtube_video_cache WHERE client_hash=?').bind(pending.client_hash).run();
   }
-  const channelRefresh=refresh||(provider==='youtube'?previousChannel?.refresh_enc:(old?.refresh_enc))||null;
+  const channelRefresh=refresh||(provider==='youtube'?previousChannel?.refresh_enc:provider==='tiktok'?previousTikTok?.refresh_enc:old?.refresh_enc)||null;
+  if(provider==='tiktok'){
+   try{
+    await env.DB.prepare('INSERT INTO oauth_tiktok_accounts(client_hash,open_id,label,avatar,token_enc,refresh_enc,expires_at,updated_at) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(client_hash,open_id) DO UPDATE SET label=excluded.label,avatar=excluded.avatar,token_enc=excluded.token_enc,refresh_enc=excluded.refresh_enc,expires_at=excluded.expires_at,updated_at=excluded.updated_at')
+     .bind(pending.client_hash,profile.id,profile.name.slice(0,120),profile.avatar.slice(0,500),access,channelRefresh,expires,now).run();
+   }catch(e){if(String(e.message||e).includes('tiktok_account_limit'))return textPage(false,'Maximum 3 TikTok accounts are allowed. Remove one first.');throw e}
+  }
   if(provider==='youtube'){
    await env.DB.prepare('INSERT INTO oauth_youtube_channels(client_hash,channel_id,label,avatar,token_enc,refresh_enc,expires_at,updated_at) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(client_hash,channel_id) DO UPDATE SET label=excluded.label,avatar=excluded.avatar,token_enc=excluded.token_enc,refresh_enc=excluded.refresh_enc,expires_at=excluded.expires_at,updated_at=excluded.updated_at')
     .bind(pending.client_hash,profile.id,profile.name.slice(0,120),profile.avatar.slice(0,500),access,channelRefresh,expires,now).run();
@@ -272,6 +288,10 @@ async function refreshIfNeeded(env,row){
   const expires=Date.now()+Math.max(60,Number(next.expires_in)||3600)*1000;
   await env.DB.prepare('UPDATE oauth_accounts SET token_enc=?,refresh_enc=?,expires_at=?,updated_at=? WHERE client_hash=? AND provider=? AND subject=?')
    .bind(encryptedAccess,encryptedRefresh,expires,Date.now(),row.client_hash,row.provider,row.subject).run();
+  if(row.provider==='tiktok'){
+   await env.DB.prepare('UPDATE oauth_tiktok_accounts SET token_enc=?,refresh_enc=?,expires_at=?,updated_at=? WHERE client_hash=? AND open_id=?')
+    .bind(encryptedAccess,encryptedRefresh,expires,Date.now(),row.client_hash,row.subject).run();
+  }
   if(row.provider==='youtube'){
    await env.DB.prepare('UPDATE oauth_youtube_channels SET token_enc=?,refresh_enc=?,expires_at=?,updated_at=? WHERE client_hash=? AND channel_id=?')
     .bind(encryptedAccess,encryptedRefresh,expires,Date.now(),row.client_hash,row.subject).run();
