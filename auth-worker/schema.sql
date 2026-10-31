@@ -110,4 +110,5 @@ CREATE TABLE IF NOT EXISTS oauth_tiktok_accounts (
 CREATE INDEX IF NOT EXISTS idx_tiktok_vault_client ON oauth_tiktok_accounts(client_hash,updated_at);
 CREATE TRIGGER IF NOT EXISTS tiktok_vault_limit BEFORE INSERT ON oauth_tiktok_accounts
 WHEN (SELECT COUNT(*) FROM oauth_tiktok_accounts WHERE client_hash=NEW.client_hash)>=3
+ AND NOT EXISTS(SELECT 1 FROM oauth_tiktok_accounts WHERE client_hash=NEW.client_hash AND open_id=NEW.open_id)
 BEGIN SELECT RAISE(ABORT,'tiktok_account_limit'); END;
