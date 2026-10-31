@@ -84,6 +84,42 @@
     '<button type="button" class="youtube-switcher-remove" data-youtube-remove="'+escapeHTML(c.id)+'" title="'+say('Відключити тільки цей канал','Disconnect this channel')+'" aria-label="'+say('Відключити канал ','Disconnect channel ')+escapeHTML(c.label)+'" '+(busy.has('youtube')||status==='offline'?'disabled':'')+'>×</button></div>';
   }).join('');
  }
+ function renderTikTokSwitcher(){
+  const container=$('#tiktok-accounts-switcher');if(!container)return;
+  const list=fields.tiktokAccounts,activeId=fields.activeTikTokAccount,limit=fields.maxTikTokAccounts;
+  container.hidden=!list.length;
+  if(!list.length)return;
+  $('#tiktok-accounts-title').textContent=say('Мої TikTok-акаунти','My TikTok accounts');
+  $('#tiktok-accounts-limit').textContent=list.length+' / '+limit;
+  $('#tiktok-add-account-label').textContent=say('Додати акаунт','Add account');
+  $('#tiktok-add-account').hidden=list.length>=limit;
+  $('#tiktok-add-account').disabled=busy.has('tiktok')||status==='offline';
+  $('#tiktok-account-options').innerHTML=list.map(c=>{
+   const selected=c.id===activeId;
+   const avatar=c.avatar&&/^https:\/\//.test(c.avatar)?'<img src="'+escapeHTML(c.avatar)+'" referrerpolicy="no-referrer" alt="">':'<span class="youtube-switcher-placeholder">♪</span>';
+   return '<div class="youtube-switcher-card '+(selected?'selected':'')+'"><button type="button" class="youtube-switcher-choice" data-tiktok-select="'+escapeHTML(c.id)+'" aria-pressed="'+selected+'" '+(busy.has('tiktok')||status==='offline'?'disabled':'')+'>'+avatar+'<span class="youtube-switcher-name"><strong>'+escapeHTML(c.label)+'</strong><small>'+(selected?say('Активний акаунт','Active account'):say('Перемкнутися','Switch account'))+'</small></span></button>'+
+    '<button type="button" class="youtube-switcher-remove" data-tiktok-remove="'+escapeHTML(c.id)+'" title="'+say('Відключити тільки цей акаунт','Disconnect only this account')+'" aria-label="'+say('Відключити акаунт ','Disconnect account ')+escapeHTML(c.label)+'" '+(busy.has('tiktok')||status==='offline'?'disabled':'')+'>×</button></div>';
+  }).join('');
+ }
+ async function chooseTikTokAccount(id){
+  if(fields.activeTikTokAccount===id||!fields.tiktokAccounts.some(x=>x.id===id))return;
+  busy.add('tiktok');render();
+  try{
+   await request('/tiktok/accounts/select',{method:'POST',body:{accountId:id}});
+   await refresh();announce(say('TikTok-акаунт змінено','TikTok account switched'));
+  }catch(e){announce(e.message||say('Не вдалося змінити акаунт','Unable to switch account'))}
+  finally{busy.delete('tiktok');render()}
+ }
+ async function removeTikTokAccount(id){
+  const account=fields.tiktokAccounts.find(x=>x.id===id);if(!account)return;
+  if(!confirm(say('Відключити TikTok «'+account.label+'»? Його збережену статистику буде видалено.','Disconnect TikTok '+account.label+'? Its saved statistics will be deleted.')))return;
+  busy.add('tiktok');render();
+  try{
+   await request('/tiktok/accounts/'+encodeURIComponent(id),{method:'DELETE'});
+   await refresh();announce(say('TikTok-акаунт відключено','TikTok account disconnected'));
+  }catch(e){announce(e.message||say('Помилка відключення','Unable to disconnect account'))}
+  finally{busy.delete('tiktok');render()}
+ }
  async function chooseYoutubeChannel(id){
   if(fields.activeYoutubeChannel===id)return;
   if(!fields.youtubeChannels.some(x=>x.id===id))return;
@@ -110,6 +146,7 @@
   const note=$('#account-status-info');
   box.innerHTML=PROVIDERS.map(stateRow).join('');
   renderYoutubeSwitcher();
+  renderTikTokSwitcher();
   if(note){
    if(status==='offline')note.textContent=say('Сервер підключень недоступний. Показано останній відомий стан; дії тимчасово вимкнені.','Connection server unavailable. Last known status is shown; actions are temporarily disabled.');
    else if(status==='loading')note.textContent=say('Перевірка підключень…','Checking connections…');
@@ -124,9 +161,12 @@
    const data=await request('/connections');
    // Discard stale responses from an earlier request (including earlier switches).
    if(requestId!==refreshSerial)return;
-   const previousChannel=fields.activeYoutubeChannel;
-   fields.providers=data.providers||{};fields.connections=data.connections||[];fields.youtubeChannels=data.youtubeChannels||[];fields.activeYoutubeChannel=data.activeYoutubeChannel||null;fields.maxYoutubeChannels=data.maxYoutubeChannels||3;status='ready';lastRefresh=Date.now();
+   const previousChannel=fields.activeYoutubeChannel,previousTikTok=fields.activeTikTokAccount;
+   fields.providers=data.providers||{};fields.connections=data.connections||[];fields.youtubeChannels=data.youtubeChannels||[];fields.activeYoutubeChannel=data.activeYoutubeChannel||null;fields.maxYoutubeChannels=data.maxYoutubeChannels||3;
+   fields.tiktokAccounts=data.tiktokAccounts||[];fields.activeTikTokAccount=data.activeTikTokAccount||null;fields.maxTikTokAccounts=data.maxTikTokAccounts||3;
+   status='ready';lastRefresh=Date.now();
    if(previousChannel!==fields.activeYoutubeChannel)window.dispatchEvent(new CustomEvent('viver-youtube-channel-switched',{detail:{channelId:fields.activeYoutubeChannel}}));
+   if(previousTikTok!==fields.activeTikTokAccount)window.dispatchEvent(new CustomEvent('viver-tiktok-account-switched',{detail:{accountId:fields.activeTikTokAccount}}));
   }catch{
    if(requestId!==refreshSerial)return;
    // A temporary offline error must not be treated as a genuine disconnection.
@@ -164,6 +204,7 @@
  }
  $('#viver-accounts')?.addEventListener('click',e=>{
   if(e.target.closest('[data-youtube-add]')){start('youtube');return}
+  if(e.target.closest('[data-tiktok-add]')){start('tiktok');return}
   const button=e.target.closest('[data-auth-provider]');if(!button||button.disabled)return;
   const provider=button.dataset.authProvider;if(!PROVIDERS.some(x=>x.id===provider))return;
   if(button.dataset.authMode==='disconnect')disconnect(provider);else start(provider);
@@ -176,6 +217,13 @@
   if(sel)chooseYoutubeChannel(sel.dataset.youtubeSelect);
  });
  $('#youtube-add-channel')?.addEventListener('click',()=>start('youtube'));
+ $('#tiktok-account-options')?.addEventListener('click',event=>{
+  const rm=event.target.closest('[data-tiktok-remove]');
+  if(rm){removeTikTokAccount(rm.dataset.tiktokRemove);return}
+  const sel=event.target.closest('[data-tiktok-select]');
+  if(sel)chooseTikTokAccount(sel.dataset.tiktokSelect);
+ });
+ $('#tiktok-add-account')?.addEventListener('click',()=>start('tiktok'));
  window.addEventListener('message',event=>{
   if(event.origin!==API||event.data?.type!=='viver-oauth-complete')return;
   clearInterval(timer);timer=null;refresh();
@@ -183,6 +231,6 @@
  window.addEventListener('focus',()=>{if(Date.now()-lastRefresh>4000)refresh()});
  window.addEventListener('hashchange',()=>{if(location.hash==='#platforms')refresh()});
  $('#language')?.addEventListener('change',render);
- window.VIVERConnections={refresh,request,start,getConnections:()=>fields.connections.map(x=>({...x})),getStatus:()=>status,getYouTubeChannels:()=>fields.youtubeChannels.map(x=>({...x})),getActiveYoutubeChannel:()=>fields.activeYoutubeChannel,selectYouTubeChannel:chooseYoutubeChannel};
+ window.VIVERConnections={refresh,request,start,getConnections:()=>fields.connections.map(x=>({...x})),getStatus:()=>status,getYouTubeChannels:()=>fields.youtubeChannels.map(x=>({...x})),getActiveYoutubeChannel:()=>fields.activeYoutubeChannel,selectYouTubeChannel:chooseYoutubeChannel,getTikTokAccounts:()=>fields.tiktokAccounts.map(x=>({...x})),getActiveTikTokAccount:()=>fields.activeTikTokAccount,selectTikTokAccount:chooseTikTokAccount};
  render();refresh();
 })();
