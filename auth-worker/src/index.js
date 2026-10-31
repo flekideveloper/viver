@@ -733,18 +733,20 @@ async function connections(req,env){
  const token=authHeader(req);if(!token)return json({error:'Connection key required'},401);
  const clientHash=await hash(token);
  const youtubeChannels=await youtubeVaultList(env,clientHash);
+ const tiktokAccounts=await tiktokVaultList(env,clientHash);
  const rows=await env.DB.prepare('SELECT * FROM oauth_accounts WHERE client_hash=?').bind(clientHash).all();
  const items=[];
  for(const row of rows.results||[]){
   const active=await refreshIfNeeded(env,row);
-  items.push({provider:row.provider,label:row.label,avatar:row.avatar,connected:row.provider==='youtube'?youtubeChannels.some(x=>x.expires_at>Date.now()||x.refresh_enc):!active.expired,expires_at:active.expires_at});
+  items.push({provider:row.provider,id:row.subject,label:row.label,avatar:row.avatar,connected:row.provider==='youtube'?youtubeChannels.some(x=>x.expires_at>Date.now()||x.refresh_enc):row.provider==='tiktok'?tiktokAccounts.some(x=>x.expires_at>Date.now()||x.refresh_enc):!active.expired,expires_at:active.expires_at});
  }
- return json({providers:allConfigs(env),connections:items,youtubeChannels:youtubeChannels.map(x=>({id:x.channel_id,label:x.label,avatar:x.avatar,canRefresh:Boolean(x.refresh_enc),expired:x.expires_at<=Date.now()})),activeYoutubeChannel:rows.results?.find(x=>x.provider==='youtube')?.subject||null,maxYoutubeChannels:YOUTUBE_CHANNEL_LIMIT});
+ return json({providers:allConfigs(env),connections:items,youtubeChannels:youtubeChannels.map(x=>({id:x.channel_id,label:x.label,avatar:x.avatar,canRefresh:Boolean(x.refresh_enc),expired:x.expires_at<=Date.now()})),activeYoutubeChannel:rows.results?.find(x=>x.provider==='youtube')?.subject||null,maxYoutubeChannels:YOUTUBE_CHANNEL_LIMIT,tiktokAccounts:tiktokAccounts.map(x=>({id:x.open_id,label:x.label,avatar:x.avatar,canRefresh:Boolean(x.refresh_enc),expired:x.expires_at<=Date.now()})),activeTikTokAccount:rows.results?.find(x=>x.provider==='tiktok')?.subject||null,maxTikTokAccounts:TIKTOK_ACCOUNT_LIMIT});
 }
 async function disconnect(req,env,provider){
  if(!PROVIDERS[provider])return json({error:'Unknown provider'},404);
  const token=authHeader(req);if(!token)return json({error:'Connection key required'},401);
  const hashKey=await hash(token);
+ if(provider==='tiktok')await env.DB.prepare('DELETE FROM oauth_tiktok_accounts WHERE client_hash=?').bind(hashKey).run();
  if(provider==='youtube'){
   await env.DB.prepare('DELETE FROM oauth_youtube_channels WHERE client_hash=?').bind(hashKey).run();
   await env.DB.prepare('DELETE FROM youtube_cache WHERE client_hash=?').bind(hashKey).run();
@@ -767,6 +769,9 @@ export default {
    if(method==='GET'&&path==='/health')return json({ok:true,providers:allConfigs(env),frontend:SITE+'/viver/'});
    if(method==='GET'&&path==='/connections')return connections(req,env);
    if(method==='POST'&&path==='/youtube/channels/select')return selectYoutubeChannel(req,env);
+   if(method==='POST'&&path==='/tiktok/accounts/select')return selectTikTokAccount(req,env);
+   const removeTikTok=/^\/tiktok\/accounts\/([^/]+)$/.exec(path);
+   if(method==='DELETE'&&removeTikTok)return removeTikTokAccount(req,env,removeTikTok[1]);
    const removeChannel=/^\/youtube\/channels\/(UC[A-Za-z0-9_-]{22})$/.exec(path);
    if(method==='DELETE'&&removeChannel)return removeYoutubeChannel(req,env,removeChannel[1]);
    if(method==='GET'&&path==='/youtube/stats')return youtubeStats(req,env);
