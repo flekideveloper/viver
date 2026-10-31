@@ -93,3 +93,21 @@ CREATE TABLE IF NOT EXISTS oauth_youtube_channels (
  PRIMARY KEY(client_hash,channel_id)
 );
 CREATE INDEX IF NOT EXISTS idx_youtube_vault_client ON oauth_youtube_channels(client_hash,updated_at);
+
+-- TikTok multi-account vault (maximum 3 per local connection key).
+-- oauth_accounts retains the selected TikTok identity for existing analytics routes.
+CREATE TABLE IF NOT EXISTS oauth_tiktok_accounts (
+ client_hash TEXT NOT NULL,
+ open_id TEXT NOT NULL,
+ label TEXT NOT NULL,
+ avatar TEXT NOT NULL DEFAULT '',
+ token_enc TEXT NOT NULL,
+ refresh_enc TEXT,
+ expires_at INTEGER NOT NULL,
+ updated_at INTEGER NOT NULL,
+ PRIMARY KEY(client_hash,open_id)
+);
+CREATE INDEX IF NOT EXISTS idx_tiktok_vault_client ON oauth_tiktok_accounts(client_hash,updated_at);
+CREATE TRIGGER IF NOT EXISTS tiktok_vault_limit BEFORE INSERT ON oauth_tiktok_accounts
+WHEN (SELECT COUNT(*) FROM oauth_tiktok_accounts WHERE client_hash=NEW.client_hash)>=3
+BEGIN SELECT RAISE(ABORT,'tiktok_account_limit'); END;
