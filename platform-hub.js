@@ -22,6 +22,7 @@
  const store=()=>{try{localStorage.setItem(KEY,JSON.stringify(settings))}catch{}};
  const connections=()=>auth.getConnections().filter(x=>x.connected&&initial.includes(x.provider));
  const active=()=>connections().find(x=>x.provider===selected);
+ const activeIdentity=()=>String(active()?.id||active()?.label||'');
  const accountKey=()=>data?.account?.id?selected+':'+data.account.id:null;
  const local=()=>{
   const k=accountKey();if(!k)return null;
@@ -215,13 +216,13 @@
  }
  async function fetchSelected(force=false){
   if(selected==='youtube'||!active()||loading)return;
-  const id=selected+':'+active().label;
+  const id=selected+':'+activeIdentity();
   if(!force&&data&&knownKey===id&&Date.now()-lastUpdate<120000)return;
   const idSeq=++serial;
   loading=true;error='';renderSocial();
   try{
    const response=await auth.request('/social/'+selected+'/overview');
-   if(serial!==idSeq||!active()||response.account?.label!==active().label)return;
+   if(serial!==idSeq||!active()||(active().id?response.account?.id!==active().id:response.account?.label!==active().label))return;
    data=response;knownKey=id;lastUpdate=Date.now();observe();syncPlanner();
   }catch(e){if(serial===idSeq){error=String(e.message||'social_provider_unavailable');data=null}}
   finally{if(serial===idSeq){loading=false;renderSocial()}}
@@ -262,7 +263,7 @@
   if(!list.some(x=>x.provider===selected)){
    serial++;data=null;error='';knownKey='';loading=false;lastUpdate=0;selected=list[0]?.provider||'youtube';
   }
-  if(active()&&selected!=='youtube'&&knownKey&&knownKey!==selected+':'+active().label){
+  if(active()&&selected!=='youtube'&&knownKey&&knownKey!==selected+':'+activeIdentity()){
    serial++;data=null;error='';knownKey='';loading=false;lastUpdate=0;
   }
   renderSidebar();
@@ -330,6 +331,10 @@
  });
  $('#social-studio-reload').addEventListener('click',()=>fetchSelected(true));
  window.addEventListener('viver-connections-updated',()=>setTimeout(sync,0));
+ window.addEventListener('viver-tiktok-account-switched',()=>{
+  serial++;data=null;knownKey='';error='';loading=false;lastUpdate=0;compareA='';compareB='';
+  setTimeout(sync,0);
+ });
  window.addEventListener('hashchange',()=>setTimeout(sync,0));
  document.addEventListener('click',ev=>{if(ev.target.closest('[data-page],[data-goto]'))setTimeout(sync,0)});
  $('#language')?.addEventListener('change',()=>setTimeout(sync,0));
