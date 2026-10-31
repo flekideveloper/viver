@@ -194,7 +194,7 @@
   finally{busy.delete(provider);render()}
  }
  async function disconnect(provider){
-  if(!confirm(provider==='youtube'?say('Відключити ВСІ YouTube-канали від VIVER? Їхню серверну історію буде видалено.','Disconnect ALL YouTube channels? Their saved server history will be deleted.'):say('Відключити '+provider+' від VIVER?','Disconnect '+provider+' from VIVER?')))return;
+  if(!confirm(provider==='youtube'?say('Відключити ВСІ YouTube-канали від VIVER? Їхню серверну історію буде видалено.','Disconnect ALL YouTube channels? Their saved server history will be deleted.'):provider==='tiktok'?say('Відключити ВСІ TikTok-акаунти від VIVER? Їхню серверну статистику буде видалено.','Disconnect ALL TikTok accounts? Their saved server statistics will be deleted.'):say('Відключити '+provider+' від VIVER?','Disconnect '+provider+' from VIVER?')))return;
   busy.add(provider);render();
   try{
    await request('/connections/'+provider,{method:'DELETE'});
