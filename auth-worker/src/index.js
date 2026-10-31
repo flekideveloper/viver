@@ -136,6 +136,60 @@ async function removeYoutubeChannel(req,env,id){
  return json({ok:true,activeChannelId:selected?.subject===id?(await env.DB.prepare("SELECT subject FROM oauth_accounts WHERE client_hash=? AND provider='youtube'").bind(clientHash).first())?.subject||null:selected?.subject||null});
 }
 
+
+/** Up to three independently authorized TikTok accounts per local connection key. */
+const TIKTOK_ACCOUNT_LIMIT=3;
+const validTikTokId=id=>typeof id==='string'&&id.length>0&&id.length<=200&&!/[\u0000-\u001f]/.test(id);
+async function ensureTikTokVault(env,clientHash){
+ await env.DB.prepare("INSERT OR IGNORE INTO oauth_tiktok_accounts(client_hash,open_id,label,avatar,token_enc,refresh_enc,expires_at,updated_at) SELECT client_hash,subject,label,avatar,token_enc,refresh_enc,expires_at,updated_at FROM oauth_accounts WHERE client_hash=? AND provider='tiktok'").bind(clientHash).run();
+}
+async function tiktokVaultList(env,clientHash){
+ await ensureTikTokVault(env,clientHash);
+ const rows=await env.DB.prepare('SELECT open_id,label,avatar,expires_at,refresh_enc,updated_at FROM oauth_tiktok_accounts WHERE client_hash=? ORDER BY updated_at DESC').bind(clientHash).all();
+ return rows.results||[];
+}
+async function selectTikTokAccount(req,env){
+ if(!config(env,'tiktok'))return json({error:'tiktok_not_configured'},409);
+ const key=authHeader(req);if(!key)return json({error:'Connection key required'},401);
+ let body;try{body=await req.json()}catch{return json({error:'invalid_request'},400)}
+ if(!validTikTokId(body?.accountId))return json({error:'invalid_account_id'},400);
+ const clientHash=await hash(key);
+ await ensureTikTokVault(env,clientHash);
+ const target=await env.DB.prepare('SELECT * FROM oauth_tiktok_accounts WHERE client_hash=? AND open_id=?').bind(clientHash,body.accountId).first();
+ if(!target)return json({error:'tiktok_account_not_connected'},404);
+ const previous=await env.DB.prepare("SELECT subject FROM oauth_accounts WHERE client_hash=? AND provider='tiktok'").bind(clientHash).first();
+ await env.DB.prepare("INSERT INTO oauth_accounts(client_hash,provider,subject,label,avatar,token_enc,refresh_enc,expires_at,updated_at) VALUES(?,'tiktok',?,?,?,?,?,?,?) ON CONFLICT(client_hash,provider) DO UPDATE SET subject=excluded.subject,label=excluded.label,avatar=excluded.avatar,token_enc=excluded.token_enc,refresh_enc=excluded.refresh_enc,expires_at=excluded.expires_at,updated_at=excluded.updated_at")
+  .bind(clientHash,target.open_id,target.label,target.avatar,target.token_enc,target.refresh_enc,target.expires_at,target.updated_at).run();
+ if(previous?.subject!==target.open_id)await env.DB.prepare("DELETE FROM social_overview_cache WHERE client_hash=? AND provider='tiktok'").bind(clientHash).run();
+ return json({ok:true,activeTikTokAccount:target.open_id});
+}
+async function removeTikTokAccount(req,env,rawId){
+ const key=authHeader(req);if(!key)return json({error:'Connection key required'},401);
+ let id;try{id=decodeURIComponent(rawId)}catch{return json({error:'invalid_account_id'},400)}
+ if(!validTikTokId(id))return json({error:'invalid_account_id'},400);
+ const clientHash=await hash(key);
+ await ensureTikTokVault(env,clientHash);
+ const account=await env.DB.prepare('SELECT open_id FROM oauth_tiktok_accounts WHERE client_hash=? AND open_id=?').bind(clientHash,id).first();
+ if(!account)return json({error:'tiktok_account_not_connected'},404);
+ const selected=await env.DB.prepare("SELECT subject FROM oauth_accounts WHERE client_hash=? AND provider='tiktok'").bind(clientHash).first();
+ await env.DB.prepare('DELETE FROM oauth_tiktok_accounts WHERE client_hash=? AND open_id=?').bind(clientHash,id).run();
+ await env.DB.prepare("DELETE FROM social_metric_snapshots WHERE client_hash=? AND provider='tiktok' AND subject=?").bind(clientHash,id).run();
+ await env.DB.prepare("DELETE FROM social_overview_cache WHERE client_hash=? AND provider='tiktok' AND subject=?").bind(clientHash,id).run();
+ let activeId=selected?.subject||null;
+ if(activeId===id){
+  const remaining=await env.DB.prepare('SELECT * FROM oauth_tiktok_accounts WHERE client_hash=? ORDER BY updated_at DESC LIMIT 1').bind(clientHash).first();
+  if(remaining){
+   await env.DB.prepare("UPDATE oauth_accounts SET subject=?,label=?,avatar=?,token_enc=?,refresh_enc=?,expires_at=?,updated_at=? WHERE client_hash=? AND provider='tiktok'")
+    .bind(remaining.open_id,remaining.label,remaining.avatar,remaining.token_enc,remaining.refresh_enc,remaining.expires_at,remaining.updated_at,clientHash).run();
+   activeId=remaining.open_id;
+  }else{
+   await env.DB.prepare("DELETE FROM oauth_accounts WHERE client_hash=? AND provider='tiktok'").bind(clientHash).run();
+   activeId=null;
+  }
+ }
+ return json({ok:true,activeTikTokAccount:activeId});
+}
+
 async function start(req,env,provider){
  if(!config(env,provider))return json({error:'Provider not configured'},409);
  const token=authHeader(req);if(!token)return json({error:'A local connection key is required'},401);
