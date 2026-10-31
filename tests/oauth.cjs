@@ -354,9 +354,9 @@ const req=(path,method='GET',origin='https://flekideveloper.github.io',token=key
   const oldInsights=await (await worker.fetch(req('/social/tiktok/overview'),env)).json();
   assert.equal(oldInsights.account.id,'tiktok-31','no other-account cache leakage');
   assert.equal(oldInsights.history.length,1,'original history preserved after switching');
-  const fourthAuth=await (await worker.fetch(req('/auth/start/tiktok','POST'),env)).json();
-  const fourthState=new URL(fourthAuth.url).searchParams.get('state');
-  assert.equal((await worker.fetch(req('/auth/callback/tiktok?code=account4&state='+fourthState),env)).status,400,'fourth distinct TikTok denied');
+  const fourthTikTokAuth=await (await worker.fetch(req('/auth/start/tiktok','POST'),env)).json();
+  const fourthTikTokState=new URL(fourthTikTokAuth.url).searchParams.get('state');
+  assert.equal((await worker.fetch(req('/auth/callback/tiktok?code=account4&state='+fourthTikTokState),env)).status,400,'fourth distinct TikTok denied');
   assert.equal(tiktokVault.size,3,'fourth account did not overwrite anything');
   assert.equal((await worker.fetch(req('/tiktok/accounts/tiktok-32','DELETE'),env)).status,200,'unlink one inactive account');
   assert.equal(tiktokVault.size,2,'two other profiles remain');
