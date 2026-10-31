@@ -94,7 +94,12 @@ const mockFetch=async(url,opts)=>{
   if(dim==='country')return Response.json(toObj([dim,'views'],[['UA',900],['PL',500]]));
  }
 
- if(String(url).includes('id.twitch.tv/oauth2/token')||String(url).includes('open.tiktokapis.com/v2/oauth/token/')||String(url).includes('api.x.com/2/oauth2/token'))
+ if(String(url).includes('open.tiktokapis.com/v2/oauth/token/')){
+  const code=new URLSearchParams(String(opts?.body||'')).get('code')||'dummy-code';
+  const suffix=/^account[234]$/.test(code)?code.at(-1):'1';
+  return Response.json({access_token:'social-test-access-tt'+suffix,refresh_token:'social-test-refresh-tt'+suffix,expires_in:3600});
+ }
+ if(String(url).includes('id.twitch.tv/oauth2/token')||String(url).includes('api.x.com/2/oauth2/token'))
   return Response.json({access_token:'social-test-access',refresh_token:'social-test-refresh',expires_in:3600});
  if(String(url).includes('api.twitch.tv/helix/users'))
   return Response.json({data:[{id:'twitch-42',display_name:'Twitch Creator',login:'twitchcreator',profile_image_url:'https://example.com/ava.jpg'}]});
@@ -108,8 +113,11 @@ const mockFetch=async(url,opts)=>{
   return Response.json({data:[{id:'clip-1',title:'Cool clip',view_count:50,created_at:'2026-10-27T11:00:00Z',url:'https://clips.twitch.tv/Testing'}]});
  if(String(url).includes('api.twitch.tv/helix/channels?'))
   return Response.json({data:[{title:'Test Twitch Channel',game_name:'Fortnite'}]});
- if(String(url).includes('open.tiktokapis.com/v2/user/info/'))
-  return Response.json({data:{user:{open_id:'tiktok-31',display_name:'TikTok Creator',username:'ttcreator',avatar_url:'https://example.com/tt.jpg',follower_count:404,following_count:22,likes_count:1900,video_count:10}},error:{code:'ok'}});
+ if(String(url).includes('open.tiktokapis.com/v2/user/info/')){
+  const match=/social-test-access-tt([1234])$/.exec(opts?.headers?.Authorization||'');
+  const n=match?Number(match[1]):1;
+  return Response.json({data:{user:{open_id:'tiktok-'+(30+n),display_name:'TikTok Creator '+n,username:'ttcreator'+n,avatar_url:'https://example.com/tt.jpg',follower_count:404+n-1,following_count:22,likes_count:1900,video_count:10}},error:{code:'ok'}});
+ }
  if(String(url).includes('open.tiktokapis.com/v2/video/list/'))
   return Response.json({data:{videos:[{id:'tt111',title:'New TikTok',create_time:1793116800,view_count:900,like_count:45,comment_count:8,share_count:5,share_url:'https://www.tiktok.com/@ttcreator/video/123'}]},error:{code:'ok'}});
  if(String(url).includes('api.x.com/2/users/me'))
