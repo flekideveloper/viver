@@ -46,6 +46,8 @@ jobs:
           test -s terms.html
           test -s legal.css
           test -s googlecdd868657411e596.html
+          test -s tiktokDw8v7GE0cTKsIijSqGmGAC5R1LkjYuHv.txt
+          grep -Fxq 'tiktok-developers-site-verification=Dw8v7GE0cTKsIijSqGmGAC5R1LkjYuHv' tiktokDw8v7GE0cTKsIijSqGmGAC5R1LkjYuHv.txt
           grep -q 'href="./privacy.html"' index.html
           grep -q 'href="./terms.html"' index.html
           node --check app.js
@@ -66,7 +68,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p _site
-          cp index.html app.js features.js connections.js youtube.js overview-analytics.js creator-studio.js platform-hub.js viver-space.js viver-tools.js viver-next.css style.css favicon.svg privacy.html terms.html legal.css googlecdd868657411e596.html _site/
+          cp index.html app.js features.js connections.js youtube.js overview-analytics.js creator-studio.js platform-hub.js viver-space.js viver-tools.js viver-next.css style.css favicon.svg privacy.html terms.html legal.css googlecdd868657411e596.html tiktokDw8v7GE0cTKsIijSqGmGAC5R1LkjYuHv.txt _site/
           touch _site/.nojekyll
           printf '%s\n' 'VIVER static site prepared.'
 
