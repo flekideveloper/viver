@@ -12,11 +12,11 @@
 <link rel="stylesheet" href="./viver-next.css?v=1">
 <script defer src="./app.js?v=9"></script>
 <script defer src="./features.js?v=8"></script>
-<script defer src="./connections.js?v=5"></script>
+<script defer src="./connections.js?v=6"></script>
 <script defer src="./youtube.js?v=5"></script>
 <script defer src="./overview-analytics.js?v=5"></script>
 <script defer src="./creator-studio.js?v=5"></script>
-<script defer src="./platform-hub.js?v=4"></script>
+<script defer src="./platform-hub.js?v=5"></script>
 <script defer src="./viver-space.js?v=3"></script>
 <script defer src="./viver-tools.js?v=3"></script>
 </head>
@@ -203,6 +203,10 @@
   </section>
   <section class="page social-network-page" id="page-tiktok" aria-hidden="true">
    <div class="page-title"><h1>TikTok</h1></div>
+   <section class="youtube-accounts-switcher" id="tiktok-accounts-switcher" hidden aria-label="Твої TikTok-акаунти">
+     <div class="youtube-switcher-heading"><div><strong id="tiktok-accounts-title">Мої TikTok-акаунти</strong><small id="tiktok-accounts-limit">1 / 3</small></div><button type="button" class="secondary-button" id="tiktok-add-account">+ <span id="tiktok-add-account-label">Додати акаунт</span></button></div>
+     <div id="tiktok-account-options" class="youtube-channel-options" role="group" aria-label="Обрати TikTok-акаунт"></div>
+   </section>
    <div class="social-network-mount" id="social-mount-tiktok">   <section class="panel social-studio-panel" id="social-studio-panel" data-platform-section="social" hidden>
     <div class="social-studio-head"><div><h2 id="social-studio-title">Платформа</h2><p id="social-studio-subtitle">Аналітика підключеного акаунта</p></div>
       <button type="button" class="secondary-button" id="social-studio-reload">↻ <span id="social-studio-reload-label">Оновити</span></button>
