@@ -33,10 +33,18 @@ const DB={
    if(sql.includes('INSERT OR IGNORE INTO oauth_youtube_channels')){
     const x=accounts.get(v[0]+'|youtube');if(x&&!youtubeVault.has(v[0]+'|'+x.subject))youtubeVault.set(v[0]+'|'+x.subject,{client_hash:v[0],channel_id:x.subject,label:x.label,avatar:x.avatar,token_enc:x.token_enc,refresh_enc:x.refresh_enc,expires_at:x.expires_at,updated_at:x.updated_at});
    }
-   if(sql.includes('INSERT INTO oauth_youtube_channels'))youtubeVault.set(v[0]+'|'+v[1],{client_hash:v[0],channel_id:v[1],label:v[2],avatar:v[3],token_enc:v[4],refresh_enc:v[5],expires_at:v[6],updated_at:v[7]});
+   if(sql.includes('INSERT OR IGNORE INTO oauth_tiktok_accounts')){
+     const x=accounts.get(v[0]+'|tiktok');if(x&&!tiktokVault.has(v[0]+'|'+x.subject))tiktokVault.set(v[0]+'|'+x.subject,{client_hash:v[0],open_id:x.subject,label:x.label,avatar:x.avatar,token_enc:x.token_enc,refresh_enc:x.refresh_enc,expires_at:x.expires_at,updated_at:x.updated_at});
+    }
+    if(sql.includes('INSERT INTO oauth_tiktok_accounts')){
+     const k=v[0]+'|'+v[1];if(!tiktokVault.has(k)&&[...tiktokVault.values()].filter(a=>a.client_hash===v[0]).length>=3)throw Error('tiktok_account_limit');
+     tiktokVault.set(k,{client_hash:v[0],open_id:v[1],label:v[2],avatar:v[3],token_enc:v[4],refresh_enc:v[5],expires_at:v[6],updated_at:v[7]});
+    }
+    if(sql.includes('UPDATE oauth_tiktok_accounts SET')){const x=tiktokVault.get(v[4]+'|'+v[5]);if(x)Object.assign(x,{token_enc:v[0],refresh_enc:v[1],expires_at:v[2],updated_at:v[3]})}
+    if(sql.includes('INSERT INTO oauth_youtube_channels'))youtubeVault.set(v[0]+'|'+v[1],{client_hash:v[0],channel_id:v[1],label:v[2],avatar:v[3],token_enc:v[4],refresh_enc:v[5],expires_at:v[6],updated_at:v[7]});
    if(sql.includes('UPDATE oauth_youtube_channels SET')){const x=youtubeVault.get(v[4]+'|'+v[5]);if(x)Object.assign(x,{token_enc:v[0],refresh_enc:v[1],expires_at:v[2],updated_at:v[3]})}
-   if(sql.includes('INSERT INTO oauth_accounts')){const v2=sql.includes("'youtube'")?[v[0],'youtube',...v.slice(1)]:v;accounts.set(v2[0]+'|'+v2[1],{client_hash:v2[0],provider:v2[1],subject:v2[2],label:v2[3],avatar:v2[4],token_enc:v2[5],refresh_enc:v2[6],expires_at:v2[7],updated_at:v2[8]})}
-   if(sql.includes('UPDATE oauth_accounts SET subject=')){const x=accounts.get(v[7]+'|youtube');if(x)Object.assign(x,{subject:v[0],label:v[1],avatar:v[2],token_enc:v[3],refresh_enc:v[4],expires_at:v[5],updated_at:v[6]})}
+   if(sql.includes('INSERT INTO oauth_accounts')){const v2=sql.includes("'youtube'")?[v[0],'youtube',...v.slice(1)]:sql.includes("'tiktok'")?[v[0],'tiktok',...v.slice(1)]:v;accounts.set(v2[0]+'|'+v2[1],{client_hash:v2[0],provider:v2[1],subject:v2[2],label:v2[3],avatar:v2[4],token_enc:v2[5],refresh_enc:v2[6],expires_at:v2[7],updated_at:v2[8]})}
+   if(sql.includes('UPDATE oauth_accounts SET subject=')){const x=accounts.get(v[7]+'|'+(sql.includes("provider='tiktok'")?'tiktok':'youtube'));if(x)Object.assign(x,{subject:v[0],label:v[1],avatar:v[2],token_enc:v[3],refresh_enc:v[4],expires_at:v[5],updated_at:v[6]})}
    if(sql.includes('UPDATE oauth_accounts SET token_enc=')){const x=accounts.get(v[4]+'|'+v[5]);if(x)Object.assign(x,{token_enc:v[0],refresh_enc:v[1],expires_at:v[2],updated_at:v[3]})}
    if(sql.includes('INSERT INTO social_overview_cache'))socialCache.set(v[0]+'|'+v[1],{client_hash:v[0],provider:v[1],subject:v[2],payload:v[3],updated_at:v[4]});
    if(sql.includes('INSERT INTO social_metric_snapshots'))socialHistory.set(v[0]+'|'+v[1]+'|'+v[2]+'|'+v[3],{client_hash:v[0],provider:v[1],subject:v[2],date:v[3],metrics:v[4],updated_at:v[5]});
@@ -44,14 +52,15 @@ const DB={
    if(sql.includes('INSERT INTO youtube_analytics_cache'))analyticsCache.set(v[0],{client_hash:v[0],channel_id:v[1],payload:v[2],updated_at:v[3]});
    if(sql.includes('INSERT INTO youtube_cache'))youtubeCache.set(v[0],{client_hash:v[0],channel_id:v[1],payload:v[2],updated_at:v[3]});
    if(sql.includes('INSERT INTO youtube_snapshots'))snapshots.set(v[0]+'|'+v[1]+'|'+v[2],{client_hash:v[0],channel_id:v[1],date:v[2],view_count:v[3],subscriber_count:v[4],video_count:v[5],recorded_at:v[6]});
-   if(sql.includes('DELETE FROM social_overview_cache'))socialCache.delete(v[0]+'|'+v[1]);
-   if(sql.includes('DELETE FROM social_metric_snapshots')){for(const [k,row] of socialHistory){if(row.client_hash===v[0]&&row.provider===v[1])socialHistory.delete(k)}}
+   if(sql.includes('DELETE FROM social_overview_cache')){const k=v[0]+'|'+(sql.includes("provider='tiktok'")?'tiktok':v[1]);if(!sql.includes('subject=?')||socialCache.get(k)?.subject===v.at(-1))socialCache.delete(k)}
+   if(sql.includes('DELETE FROM social_metric_snapshots')){for(const [k,row] of socialHistory){if(row.client_hash===v[0]&&row.provider===(sql.includes("provider='tiktok'")?'tiktok':v[1])&&(!sql.includes('subject=?')||row.subject===v.at(-1)))socialHistory.delete(k)}}
    if(sql.includes('DELETE FROM youtube_video_cache'))videoCache.delete(v[0]);
    if(sql.includes('DELETE FROM youtube_analytics_cache'))analyticsCache.delete(v[0]);
    if(sql.includes('DELETE FROM youtube_cache'))youtubeCache.delete(v[0]);
    if(sql.includes('DELETE FROM youtube_snapshots')){for(const [k,row] of snapshots){if(row.client_hash===v[0]&&(v.length<2||row.channel_id===v[1]))snapshots.delete(k)}}
    if(sql.includes('DELETE FROM oauth_youtube_channels')){for(const [k,row] of youtubeVault){if(row.client_hash===v[0]&&(v.length<2||row.channel_id===v[1]))youtubeVault.delete(k)}}
-   if(sql.includes('DELETE FROM oauth_accounts'))accounts.delete(v[0]+'|'+v[1]);
+    if(sql.includes('DELETE FROM oauth_tiktok_accounts')){for(const [k,row] of tiktokVault){if(row.client_hash===v[0]&&(v.length<2||row.open_id===v[1]))tiktokVault.delete(k)}}
+   if(sql.includes('DELETE FROM oauth_accounts'))accounts.delete(v[0]+'|'+(sql.includes("provider='tiktok'")?'tiktok':v[1]));
    return {success:true}
   }};return entry}
 };
