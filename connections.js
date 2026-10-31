@@ -19,7 +19,7 @@
   if(!ready)return say('Потрібне налаштування','Setup needed');
   return say('Підключити','Connect');
  };
- const fields={providers:{},connections:[],youtubeChannels:[],activeYoutubeChannel:null,maxYoutubeChannels:3};
+ const fields={providers:{},connections:[],youtubeChannels:[],activeYoutubeChannel:null,maxYoutubeChannels:3,tiktokAccounts:[],activeTikTokAccount:null,maxTikTokAccounts:3};
  let status='loading',busy=new Set(),popup=null,timer=null,lastRefresh=0,refreshSerial=0;
  function getKey(){
   try{
@@ -55,6 +55,14 @@
    return '<div class="account-link-row"><span class="account-brand account-youtube">▶</span><div class="account-link-details"><strong>YouTube</strong>'+manage+'<small>'+escapeHTML(active?.label||'')+'</small></div>'+add+
    (amount?'<button type="button" class="secondary-button account-action" data-auth-provider="youtube" data-auth-mode="disconnect" '+(disabled?'disabled':'')+'>'+say('Відключити всі','Disconnect all')+'</button>':
     '<button type="button" class="secondary-button account-action" data-auth-provider="youtube" data-auth-mode="connect" '+(disabled?'disabled':'')+'>'+escapeHTML(action)+'</button>')+'</div>';
+  }
+  if(provider.id==='tiktok'){
+   const accounts=fields.tiktokAccounts,amount=accounts.length,max=fields.maxTikTokAccounts;
+   const add=ready&&status!=='offline'&&amount<max?'<button type="button" class="secondary-button account-action" data-tiktok-add="1" '+(busy.has('tiktok')?'disabled':'')+'>'+say('+ Додати акаунт','+ Add account')+'</button>':'';
+   const manage=amount?escapeHTML(say('Акаунтів: ','Accounts: ')+amount+'/'+max):escapeHTML(label);
+   return '<div class="account-link-row"><span class="account-brand account-tiktok">♪</span><div class="account-link-details"><strong>TikTok</strong><span class="account-link-status '+statusClass+'">'+manage+'</span><small>'+escapeHTML(active?.label||'')+'</small></div>'+add+
+    (amount?'<button type="button" class="secondary-button account-action" data-auth-provider="tiktok" data-auth-mode="disconnect" '+(disabled?'disabled':'')+'>'+say('Відключити всі','Disconnect all')+'</button>':
+     '<button type="button" class="secondary-button account-action" data-auth-provider="tiktok" data-auth-mode="connect" '+(disabled?'disabled':'')+'>'+escapeHTML(action)+'</button>')+'</div>';
   }
   return '<div class="account-link-row"><span class="account-brand account-'+provider.id+'">'+({youtube:'▶',tiktok:'♪',twitch:'◪',x:'𝕏'}[provider.id])+'</span><div class="account-link-details"><strong>'+provider.label+'</strong><span class="account-link-status '+statusClass+'">'+escapeHTML(active?.label||label)+'</span></div><button type="button" class="secondary-button account-action" data-auth-provider="'+provider.id+'" data-auth-mode="'+(active?'disconnect':'connect')+'" '+(disabled?'disabled':'')+'>'+escapeHTML(action)+'</button></div>';
  }
