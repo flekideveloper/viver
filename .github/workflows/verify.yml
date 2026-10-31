@@ -74,3 +74,5 @@ jobs:
         run: node tests/platform-hub.cjs
       - name: Test multi-channel YouTube switcher
         run: node tests/youtube-channels.cjs
+      - name: Test three TikTok accounts and account switcher
+        run: node tests/tiktok-accounts.cjs
