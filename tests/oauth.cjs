@@ -330,12 +330,47 @@ const req=(path,method='GET',origin='https://flekideveloper.github.io',token=key
   if(provider==='x'){assert.equal(insight.metrics.followers,83);assert.equal(insight.content[0].views,800)}
  }
  assert.equal(socialCache.size,3,'three isolated social caches');
+
+  // Distinct TikTok OAuth profiles must coexist under one local VIVER key.
+  const firstTT=await (await worker.fetch(req('/connections'),env)).json();
+  assert.equal(firstTT.tiktokAccounts.length,1,'existing TikTok profile migrated to new vault');
+  assert.equal(firstTT.activeTikTokAccount,'tiktok-31');
+  for(const n of [2,3]){
+   const auth=await (await worker.fetch(req('/auth/start/tiktok','POST'),env)).json();
+   const state=new URL(auth.url).searchParams.get('state');
+   const result=await worker.fetch(req('/auth/callback/tiktok?code=account'+n+'&state='+state),env);
+   assert.equal(result.status,200,'authorize TikTok profile '+n);
+   const insight=await (await worker.fetch(req('/social/tiktok/overview'),env)).json();
+   assert.equal(insight.account.id,'tiktok-'+(30+n),'profile-specific TikTok insights');
+  }
+  const threeTT=await (await worker.fetch(req('/connections'),env)).json();
+  assert.equal(threeTT.tiktokAccounts.length,3);
+  assert.equal(threeTT.activeTikTokAccount,'tiktok-33','latest TikTok account active');
+  assert(!JSON.stringify(threeTT).includes('social-test-access'),'no TikTok tokens in browser responses');
+  const selectTT=(accountId,token=key)=>new Request(base+'/tiktok/accounts/select',{method:'POST',headers:{Origin:'https://flekideveloper.github.io',Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({accountId})});
+  assert.equal((await worker.fetch(selectTT('tiktok-31','wrong'),env)).status,401,'TikTok switching requires capability');
+  assert.equal((await worker.fetch(selectTT('unlinked'),env)).status,404,'cannot switch to unlinked identity');
+  assert.equal((await worker.fetch(selectTT('tiktok-31'),env)).status,200,'switch back to original account');
+  const oldInsights=await (await worker.fetch(req('/social/tiktok/overview'),env)).json();
+  assert.equal(oldInsights.account.id,'tiktok-31','no other-account cache leakage');
+  assert.equal(oldInsights.history.length,1,'original history preserved after switching');
+  const fourthAuth=await (await worker.fetch(req('/auth/start/tiktok','POST'),env)).json();
+  const fourthState=new URL(fourthAuth.url).searchParams.get('state');
+  assert.equal((await worker.fetch(req('/auth/callback/tiktok?code=account4&state='+fourthState),env)).status,400,'fourth distinct TikTok denied');
+  assert.equal(tiktokVault.size,3,'fourth account did not overwrite anything');
+  assert.equal((await worker.fetch(req('/tiktok/accounts/tiktok-32','DELETE'),env)).status,200,'unlink one inactive account');
+  assert.equal(tiktokVault.size,2,'two other profiles remain');
+  assert.equal((await worker.fetch(req('/tiktok/accounts/tiktok-31','DELETE'),env)).status,200,'unlink active account');
+  assert.equal((await (await worker.fetch(req('/connections'),env)).json()).activeTikTokAccount,'tiktok-33','remaining profile selected');
+  assert.equal((await (await worker.fetch(req('/social/tiktok/overview'),env)).json()).account.id,'tiktok-33');
+
  for(const provider of ['twitch','tiktok','x']){
   assert.equal((await worker.fetch(req('/connections/'+provider,'DELETE'),env)).status,200);
   assert.equal((await worker.fetch(req('/social/'+provider+'/overview'),env)).status,404,'disconnected '+provider+' never exposes data');
  }
  assert.equal(socialCache.size,0,'unlink clears all social caches');
  assert.equal(socialHistory.size,0,'unlink clears social snapshots');
+ assert.equal(tiktokVault.size,0,'disconnect all removes TikTok vault tokens');
 
  assert.equal(accounts.size,0,'disconnect clears encrypted tokens');
  console.log('VIVER OAuth tests: PASS — OAuth, PKCE, encrypted tokens, live YouTube metrics, cache, history, no token leaks, disconnect');
